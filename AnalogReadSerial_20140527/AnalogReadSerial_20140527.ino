@@ -21,20 +21,16 @@ void watchdogSetup(void)
 {
 cli();
 wdt_reset();
+
 /*
 WDTCSR configuration:
 WDIE = 1: Interrupt Enable
 WDE = 1 :Reset Enable
 See table for time-out variations:
-WDP3 = 0 :For 1000ms Time-out
-WDP2 = 1 :For 1000ms Time-out
-WDP1 = 1 :For 1000ms Time-out
-WDP0 = 0 :For 1000ms Time-out
-
-WDP3 = 1 :For 4000ms Time-out
-WDP2 = 0 :For 4000ms Time-out
-WDP1 = 0 :For 4000ms Time-out
-WDP0 = 0 :For 4000ms Time-out*/
+For 1000ms Time-out: WDP3 = 0; WDP2 = 1; WDP1 = 1; WDP0 = 0
+For 4000ms Time-out: WDP3 = 1; WDP2 = 0; WDP1 = 0; WDP0 = 0
+ */
+ 
 // Enter Watchdog Configuration mode:
 WDTCSR |= (1<<WDCE) | (1<<WDE);
 // Set Watchdog settings:
@@ -45,11 +41,11 @@ sei();
 // the loop routine runs over and over again forever:
 unsigned long i=0;
 char str[10];
-unsigned long usec_time=0, sec=0, frac=0, target, wrap=0;
+unsigned long target=0;
+unsigned long ms_time=0, usec_time=0, sec=0, frac=0, wrap=0;
 long delta=0;
-long adj_ms=0;
-// unsigned int adj_us=0;
-int adj_us=0; 
+int adj_ms=0;
+unsigned int adj_us=0; 
 
 void loop() {
   wdt_reset();
@@ -73,6 +69,7 @@ void loop() {
   Serial.print(sensorValue); Serial.print("} --\t");
 
   usec_time = micros();
+  ms_time = millis();
   sec = usec_time/1000000;
   frac = usec_time - sec * 1000000;
   frac = 1000+frac/1000;
@@ -92,6 +89,9 @@ void loop() {
   adj_us = adj_us + delta/2;
   do {adj_ms++; adj_us=adj_us-1000;} while (adj_us>1100);
   do {adj_ms--; adj_us=adj_us+1000;} while (adj_us<0);
+  
+  calc_adj(target, ms_time, usec_time, &adj_ms, &adj_us);
+  
   Serial.println(delta);
   Serial.print("                "); Serial.print(i); Serial.print("/"); Serial.print(adj_ms); Serial.print("/"); Serial.println(adj_us);
   // delay in between reads for stability
@@ -99,4 +99,8 @@ void loop() {
   int d;
   for (d=adj_us; d>0; d=d-16000) delayMicroseconds(min(d,16000));  
   i++;
+}
+
+void calc_adj(unsigned long target, unsigned long ms_time, unsigned int us_time, int *adj_ms, unsigned int *adj_us)
+{
 }
