@@ -95,18 +95,9 @@ void loop()
       Serial.print("DigIn[5]-> "); Serial.println(digitalRead(5));
       for (int i=0;i<num_regs;i++) {if(read_by[i]<16)Serial.print("0");Serial.print(read_by[i],HEX); Serial.print(" ");}
       Serial.println(" ");
-
-      Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
-      Wire.write((byte)0x0f); // start at register 0x0F Status Register
-      Wire.endTransmission();
-      Wire.requestFrom(0x68, 1); // Read one byte only
-      byte RTC_status = Wire.read();
-
-      Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
-      Wire.write((byte)0x0f); // Status Register
-      Wire.write((RTC_status & (byte) 0xFC)); // clear the alarm flags
-      Wire.endTransmission();      
     }
+    clear_alarms();
+    convert_temp();
     // The below are all BCD encoded with some high control bits on some
     int seconds = read_by[0]; // get seconds
     int minutes = read_by[1]; // get minutes
@@ -165,4 +156,29 @@ void s_prt_lead0(long in, int places) {
   Serial.print((out_str+(10-places)));
   return;
 }
-  
+
+void clear_alarms() {
+  Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
+  Wire.write((byte)0x0f); // start at register 0x0F Status Register
+  Wire.endTransmission();
+  Wire.requestFrom(0x68, 1); // Read one byte only
+  byte RTC_status = Wire.read();
+
+  Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
+  Wire.write((byte)0x0f); // Status Register
+  Wire.write((RTC_status & (byte) 0xFC)); // clear the alarm flags
+  Wire.endTransmission();      
+}  
+
+void convert_temp() {
+  Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
+  Wire.write((byte)0x0e); // start at register 0x0F Status Register
+  Wire.endTransmission();
+  Wire.requestFrom(0x68, 1); // Read one byte only
+  byte RTC_cr = Wire.read();
+
+  Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
+  Wire.write((byte)0x0e); // Status Register
+  Wire.write((RTC_cr | (byte) 0x20)); // clear the alarm flags
+  Wire.endTransmission();      
+}
