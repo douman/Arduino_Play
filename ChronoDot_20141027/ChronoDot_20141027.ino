@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
-const char *version="ChronoDot_20141027 -> V2.4.0-20141105  ";
+const char *version="ChronoDot_20141027 -> V2.5.0-20141108  ";
 const long msec_repeat=5000;
 const int num_regs = 19;
 unsigned long last_msec;
@@ -142,7 +142,7 @@ void loop()
     Serial.print(" Temp-> ");
     Serial.print(read_by[17]);
     Serial.print(".");
-    Serial.print((read_by[18] >> 6)*25);
+    s_prt_lead0((long) (read_by[18] >> 6)*25, 2);
     Serial.print(" deg C");
     Serial.println("");
   }
