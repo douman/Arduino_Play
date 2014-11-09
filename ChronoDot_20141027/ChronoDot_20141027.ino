@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
-const char *version="ChronoDot_20141027 -> V2.5.0-20141108  ";
+const char *version="ChronoDot_20141027 -> V2.5.1-20141108   ";
 const long msec_repeat=5000;
 const int num_regs = 19;
 unsigned long last_msec;
@@ -95,9 +95,10 @@ void loop()
       Serial.print("DigIn[5]-> "); Serial.println(digitalRead(5));
       for (int i=0;i<num_regs;i++) {if(read_by[i]<16)Serial.print("0");Serial.print(read_by[i],HEX); Serial.print(" ");}
       Serial.println(" ");
+      clear_alarms();
+      convert_temp();
     }
-    clear_alarms();
-    convert_temp();
+
     // The below are all BCD encoded with some high control bits on some
     int seconds = read_by[0]; // get seconds
     int minutes = read_by[1]; // get minutes
@@ -135,6 +136,12 @@ void loop()
     Serial.print(".");
     s_prt_lead0((long) (read_by[18] >> 6)*25, 2);
     Serial.print(" deg C");
+    long Ftemp = 3200 + ((read_by[17]*100 + (read_by[18] >> 6)*25)*9)/5;
+    Serial.print(" -- ");
+    Serial.print(Ftemp/100);
+    Serial.print(".");
+    s_prt_lead0(Ftemp%100, 2);
+    Serial.print(" deg F");
     Serial.println("");
   }
   inbyte=NULL;
