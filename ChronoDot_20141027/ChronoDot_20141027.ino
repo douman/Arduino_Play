@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
-const char *version="ChronoDot_20141027 -> V3.0.1-20141109 ";
+const char *version="ChronoDot_20141027 -> V3.0.3-20141109 ";
 const long msec_repeat=9000;
 const int num_regs = 19;
 const int DS3231_addr = 0x68; // DS3231 I2C address
@@ -36,13 +36,15 @@ void loop()
     switch (inbyte) {
     case 'R': // Output all registers
       print_DS3231_registers(read_by); // print out registers, reset alarms and reguest temp
+      read_clock(read_by);
       break;
     case 'W': // Write Clock values
       set_time();
+      read_clock(read_by);
       break;
     default:;
     }
-    print_time(read_by);  
+    print_time(read_by);
   }
 }
 
@@ -63,13 +65,7 @@ void s_prt_lead0(long in, int places) {
   Serial.print((out_str+(10-places)));
 }
 
-void clear_alarms() {
-  Wire.beginTransmission(DS3231_addr); // DS3231_addr is DS3231 device address
-  Wire.write((byte)0x0f); // start at register 0x0F Status Register
-  Wire.endTransmission();
-  Wire.requestFrom(DS3231_addr, 1); // Read one byte only
-  byte RTC_status = Wire.read();
-
+void clear_alarms(byte RTC_status) {
   Wire.beginTransmission(DS3231_addr); // DS3231_addr is DS3231 device address
   Wire.write((byte)0x0f); // Status Register
   Wire.write((RTC_status & (byte) 0xFC)); // clear the alarm flags
@@ -121,12 +117,12 @@ void DS3231_setup() {
 }
 
 void drm_start_print() {
-  Serial.print(version); Serial.print(" SN#");
+  Serial.print(version); Serial.print(F(" SN#"));
   Serial.println(drm_serialno());
-  Serial.print("Compiled-> ");
-  Serial.print(__DATE__); 
-  Serial.print(" ");
-  Serial.println( __TIME__);
+  Serial.print(F("Compiled-> "));
+  Serial.print(F(__DATE__)); 
+  Serial.print(F(" "));
+  Serial.println(F(__TIME__));
 }
 
 void print_time(byte *read_by) {
@@ -149,47 +145,47 @@ void print_time(byte *read_by) {
     int int_year = 2000 + (100*(month>32)) + (long) bcd2dec_byte(year);
     unsigned long lsec = seconds + 60*(minutes + 60*(hours + 24*dom));
     
-    s_prt_lead0(int_year,4); Serial.print("/");
-    s_prt_lead0(month,2); Serial.print("/");
-    s_prt_lead0(dom,2); Serial.print(" ");
+    s_prt_lead0(int_year,4); Serial.print(F("/"));
+    s_prt_lead0(month,2); Serial.print(F("/"));
+    s_prt_lead0(dom,2); Serial.print(F(" "));
     
 // Human readable date and time
-    s_prt_lead0(hours,2); Serial.print(":");
-    s_prt_lead0((long) minutes, 2); Serial.print(":");
+    s_prt_lead0(hours,2); Serial.print(F(":"));
+    s_prt_lead0((long) minutes, 2); Serial.print(F(":"));
     s_prt_lead0((long) seconds, 2);    
-    Serial.print(" PST ");
+    Serial.print(F(" PST "));
 
 // Doug's date serial number to the second    
     s_prt_lead0((long) int_year, 4);
     s_prt_lead0((long) month, 2);
     s_prt_lead0((long) dom, 2);
-    Serial.print("_");
+    Serial.print(F("_"));
     s_prt_lead0((long) (hours & 0x3F), 2);
     s_prt_lead0((long) minutes, 2);
     s_prt_lead0((long) seconds, 2);
 
 //  Temperature
-    Serial.print(" T-> ");
+    Serial.print(F(" T-> "));
     Serial.print(read_by[17]);
-    Serial.print(".");
+    Serial.print(F("."));
     s_prt_lead0((long) (read_by[18] >> 6)*25, 2);
-    Serial.print("C");
+    Serial.print(F("C"));
     long Ftemp = 3200 + ((read_by[17]*100 + (read_by[18] >> 6)*25)*9)/5;
-    Serial.print("/");
+    Serial.print(F("/"));
     Serial.print(Ftemp/100);
-    Serial.print(".");
+    Serial.print(F("."));
     s_prt_lead0(Ftemp%100, 2);
-    Serial.print("F");
+    Serial.print(F("F"));
     
 // Delta seconds    
-    Serial.print(" dS-> ");
+    Serial.print(F(" dS-> "));
     Serial.print(lsec - last_sec); 
     last_sec = lsec;
 
 // Status flags
-    if((sr & 0x04) != 0) Serial.print("  Bsy");
-    if((sr & 0x01) != 0) Serial.print("  A0");
-    if((sr & 0x02) != 0) Serial.print("  A1");
+    if((sr & 0x04) != 0) Serial.print(F("  Bsy"));
+    if((sr & 0x01) != 0) Serial.print(F("  A0"));
+    if((sr & 0x02) != 0) Serial.print(F("  A1"));
 
     Serial.println("");
 }
@@ -211,23 +207,23 @@ void set_time() { // This is how I bootstrap the time on the DS3231, you must ha
 }
 
 void read_clock(byte *read_by) {
-    int i;
-    Wire.beginTransmission(DS3231_addr); // DS3231_addr is DS3231 device address
-    Wire.write((byte)0); // start at register 0
-    Wire.endTransmission();
-    Wire.requestFrom(DS3231_addr, num_regs); // request read of all registers
-    for (i=0;(i<num_regs && Wire.available());i++) { read_by[i] = Wire.read(); }
-    if (i!=num_regs) { Serial.print("Read only "); Serial.print(i); Serial.println(" bytes");}
+  int i;
+  Wire.beginTransmission(DS3231_addr); // DS3231_addr is DS3231 device address
+  Wire.write((byte)0); // start at register 0
+  Wire.endTransmission();
+  Wire.requestFrom(DS3231_addr, num_regs); // request read of all registers
+  for (i=0;(i<num_regs && Wire.available());i++) { read_by[i] = Wire.read(); }
+  if (i!=num_regs) { Serial.print(F("Read only ")); Serial.print(i); Serial.println(F(" bytes"));}
 }
 
 void print_DS3231_registers(byte *read_by) {
-  Serial.print("DigIn[5]-> "); Serial.println(digitalRead(5));
+  convert_temp();
+  Serial.print(F("DigIn[5]-> ")); Serial.println(digitalRead(5));
   for (int i=0; i<num_regs; i++) {
-    if(read_by[i]<16) Serial.print("0");
-    Serial.print(read_by[i],HEX); 
-    Serial.print(" ");
+    if(read_by[i]<16) Serial.print(F("0"));
+    Serial.print(read_by[i], HEX); 
+    Serial.print(F(" "));
   }
   Serial.println("");
-  clear_alarms();
-  convert_temp();
+  clear_alarms(read_by[15]);
 }
