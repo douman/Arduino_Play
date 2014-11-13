@@ -4,7 +4,8 @@
 const char *version="ChronoDot_20141027 -> V3.0.3-20141109 ";
 const long msec_repeat=9000;
 const int num_regs = 19;
-const int DS3231_addr = 0x68; // DS3231 I2C address
+// const int DS3231_addr = 0x68; // DS3231 I2C address ChronoDot
+const int DS3231_addr = 0x57; // DS3231 I2C address China Board
 unsigned long last_msec = 9999999; // initialize to weird value to assure quick first read
 unsigned long last_sec=0;
 
@@ -198,11 +199,11 @@ void set_time() { // This is how I bootstrap the time on the DS3231, you must ha
   Wire.write((byte) 0x24); // Minutes
   Wire.write((byte) 0x07); // Hour register
 //  Set Date
-//  Wire.write((byte) 0x03); // start at register 3
-//  Wire.write((byte) 0x01); // Day of Week
-//  Wire.write((byte) 0x28); // Day of Month
-//  Wire.write((byte) 0x10); // Month
-//  Wire.write((byte) 0x14); // Year
+  Wire.write((byte) 0x03); // start at register 3
+  Wire.write((byte) 0x01); // Day of Week
+  Wire.write((byte) 0x28); // Day of Month
+  Wire.write((byte) 0x10); // Month
+  Wire.write((byte) 0x14); // Year
   Wire.endTransmission();
 }
 
