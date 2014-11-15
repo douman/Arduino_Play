@@ -26,6 +26,7 @@ void loop()
   byte read_by[num_regs];
   
   unsigned long new_msec = millis();
+  LED_Blink(11, last_msec, new_msec);  // Flash an LED on PWM pin 11
   boolean next_sec = (last_msec/msec_repeat != new_msec/msec_repeat);
   if(next_sec) last_msec=new_msec;
 
@@ -231,3 +232,12 @@ void print_DS3231_registers(byte *read_by) {
   Serial.println("");
   clear_alarms(read_by[15]);
 }
+boolean LED_Blink(int pin, unsigned long last_msec, unsigned long new_msec) {
+  // Flash an LED on PWM pin 11
+  const unsigned long period=2000;
+  int intensity=254;
+  if (new_msec % period < period/2) intensity = 0;
+  analogWrite(pin, intensity);
+  return(intensity);
+}
+  
