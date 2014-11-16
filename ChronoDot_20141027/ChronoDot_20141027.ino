@@ -1,16 +1,24 @@
+#include <Arduino.h>
 #include <Wire.h>
 #include <EEPROM.h>
+#include <TM1637Display.h>
+
+// Display Module connection pins (Digital Pins)
+#define DISP_CLK 4
+#define DISP_DIO 2
 
 const char *version="ChronoDot_20141027 -> V3.1.3-20141109 ";
 // A little tweeking to get to work with new clock module from ebay $1.59 from Seller: accecity2008 
 // Works with both now, china module has memory also.
 //
-const long msec_repeat=9000;
+const long msec_repeat=500;
 const int num_regs = 19;
 const int DS3231_addr = 0x68; // DS3231 I2C address ChronoDot
 // const int DS3231_addr = 0x57; // DS3231 I2C address China Board
 unsigned long last_msec = 9999999; // initialize to weird value to assure quick first read
 unsigned long last_sec=0;
+
+TM1637Display display(DISP_CLK, DISP_DIO);
 
 void setup()
 {
@@ -18,6 +26,7 @@ void setup()
   Serial.begin(115200);
   DS3231_setup();
   drm_start_print();
+  display.setBrightness(0x0f);
 }
  
 void loop()
@@ -27,6 +36,7 @@ void loop()
   
   unsigned long new_msec = millis();
   LED_Blink(11, last_msec, new_msec);  // Flash an LED on PWM pin 11
+  
   boolean next_sec = (last_msec/msec_repeat != new_msec/msec_repeat);
   if(next_sec) last_msec=new_msec;
 
@@ -49,7 +59,7 @@ void loop()
       break;
     default:;
     }
-    print_time(read_by);
+    print_time(read_by, new_msec);
   }
 }
 
@@ -130,7 +140,7 @@ void drm_start_print() {
   Serial.println(F(__TIME__));
 }
 
-void print_time(byte *read_by) {
+void print_time(byte *read_by, long msecs) {
     // The below are all BCD encoded with some high control bits on some
     int seconds = read_by[0]; // get seconds
     int minutes = read_by[1]; // get minutes
@@ -147,6 +157,9 @@ void print_time(byte *read_by) {
     dow = bcd2dec_byte(dow);
     dom = bcd2dec_byte(dom);
     month = bcd2dec_byte(0x1F & month);
+    
+    write_Disp(hours, minutes, seconds, msecs);
+    
     int int_year = 2000 + (100*(month>32)) + (long) bcd2dec_byte(year);
     unsigned long lsec = seconds + 60*(minutes + 60*(hours + 24*dom));
     
@@ -240,4 +253,13 @@ boolean LED_Blink(int pin, unsigned long last_msec, unsigned long new_msec) {
   analogWrite(pin, intensity);
   return(intensity);
 }
-  
+void write_Disp(int hours, int minutes, int seconds, long msecs) {
+  int num;
+  num = hours*100+minutes; // hours min (normal clock)
+//  num = minutes*100+seconds; // mins secs
+  byte dbyte = num/100 - 10*(num/1000);
+  dbyte = display.encodeDigit(dbyte);
+  if((msecs % 1000) < 500) dbyte = dbyte | 0x80;
+  display.showNumberDec(num, true);
+  display.setSegments(&dbyte, 1, 1);
+  }
