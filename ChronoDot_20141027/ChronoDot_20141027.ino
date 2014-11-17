@@ -7,9 +7,10 @@
 #define DISP_CLK 4
 #define DISP_DIO 2
 
-const char *version="ChronoDot_20141027 -> V3.1.3-20141109 ";
+const char *version="ChronoDot_20141027 -> V4.0.0-20141116 ";
 // A little tweeking to get to work with new clock module from ebay $1.59 from Seller: accecity2008 
 // Works with both now, china module has memory also.
+// shows date at top of minute now with V4
 //
 const long msec_repeat=500;
 const int num_regs = 19;
@@ -157,12 +158,12 @@ void print_time(byte *read_by, long msecs) {
     dow = bcd2dec_byte(dow);
     dom = bcd2dec_byte(dom);
     month = bcd2dec_byte(0x1F & month);
-    
-    write_Disp(hours, minutes, seconds, msecs);
-    
-    int int_year = 2000 + (100*(month>32)) + (long) bcd2dec_byte(year);
+    year = bcd2dec_byte(year);
+    int int_year = 2000 + (100*(month>32)) + (long) year;
     unsigned long lsec = seconds + 60*(minutes + 60*(hours + 24*dom));
     
+    write_Disp(year, month, dom, hours, minutes, seconds, msecs);
+
     s_prt_lead0(int_year,4); Serial.print(F("/"));
     s_prt_lead0(month,2); Serial.print(F("/"));
     s_prt_lead0(dom,2); Serial.print(F(" "));
@@ -253,13 +254,28 @@ boolean LED_Blink(int pin, unsigned long last_msec, unsigned long new_msec) {
   analogWrite(pin, intensity);
   return(intensity);
 }
-void write_Disp(int hours, int minutes, int seconds, long msecs) {
+void write_Disp(int year,int month,int dom, int hours, int minutes, int seconds, long msecs) {
   int num;
-  num = hours*100+minutes; // hours min (normal clock)
-//  num = minutes*100+seconds; // mins secs
-  byte dbyte = num/100 - 10*(num/1000);
-  dbyte = display.encodeDigit(dbyte);
-  if((msecs % 1000) < 500) dbyte = dbyte | 0x80;
-  display.showNumberDec(num, true);
-  display.setSegments(&dbyte, 1, 1);
+  byte colon=0x00;
+  byte digits[4]={0,0,0,0};
+  int num_hi = hours;
+  int num_lo = minutes;
+
+  if((msecs % 1000) < (int) 500) colon=0x80;
+  if(seconds >= 2 && seconds <= 5) {
+    num_hi = 20;
+    num_lo = year;
+    colon = 0;
   }
+  else if (seconds >= 6 && seconds <= 8) {
+    num_hi = month;
+    num_lo = dom;
+    colon=0x80;    
+  }
+  digits[0]=display.encodeDigit(num_hi/10);
+  digits[1]=display.encodeDigit(num_hi - 10*(num_hi/10)) | colon;
+  digits[2]=display.encodeDigit(num_lo/10);
+  digits[3]=display.encodeDigit(num_lo - 10*(num_lo/10));
+  
+  display.setSegments(digits);
+}

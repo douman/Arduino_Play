@@ -71,13 +71,13 @@ void loop()
   if (dataFile) {
     dataFile.println(dataString);
     dataFile.close();
-    // print to the serial port too:
-    Serial.println(dataString);
   }  
   // if the file isn't open, pop up an error:
   else {
     Serial.println("error opening datalog.txt");
-  } 
+  }
+  // print to the serial port too:
+  Serial.println(dataString); 
   delay(2000);
 }
 
