@@ -7,7 +7,7 @@
 #define DISP_CLK 4
 #define DISP_DIO 2
 
-const char *version="ChronoDot_20141027 -> V4.0.0-20141116 ";
+const char *version="ChronoDot_20141027 -> V4.0.1-20141120 ";
 // A little tweeking to get to work with new clock module from ebay $1.59 from Seller: accecity2008 
 // Works with both now, china module has memory also.
 // shows date at top of minute now with V4
@@ -214,14 +214,14 @@ void set_time() { // This is how I bootstrap the time on the DS3231, you must ha
 //  Set Time
   Wire.write((byte) 0x00); // start at register 0
   Wire.write((byte) 0x00); // Seconds
-  Wire.write((byte) 0x05); // Minutes
-  Wire.write((byte) 0x20); // Hour register
+  Wire.write((byte) 0x49); // Minutes
+  Wire.write((byte) 0x19); // Hour register
 //  Set Date
 //  Wire.write((byte) 0x03); // start at register 3
-  Wire.write((byte) 0x03); // Day of Week
-  Wire.write((byte) 0x12); // Day of Month
-  Wire.write((byte) 0x11); // Month
-  Wire.write((byte) 0x14); // Year
+//  Wire.write((byte) 0x03); // Day of Week
+//  Wire.write((byte) 0x12); // Day of Month
+//  Wire.write((byte) 0x11); // Month
+//  Wire.write((byte) 0x14); // Year
   Wire.endTransmission();
 }
 
