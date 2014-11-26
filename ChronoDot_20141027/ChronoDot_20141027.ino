@@ -1,3 +1,13 @@
+// Sketch to be a clock using a 4 digit display and DS3231 RTC 
+// drm 20141027 and continous improvements/tinkering
+// A little tweeking to get to work with new clock module from ebay $1.59 from Seller: accecity2008 
+// Works with both now, china module has memory also.
+// shows date at top of minute now with V4
+//
+// if the colon is blinking you are being shown the time (typical display)
+// if the colon is off you are being shown the year (from seconds 3-5)
+// if the colon is on solid you are being shown the month:day (from seconds 6-8)
+//
 #include <Arduino.h>
 #include <Wire.h>
 #include <EEPROM.h>
@@ -7,15 +17,10 @@
 #define DISP_CLK 4
 #define DISP_DIO 2
 
-const char *version="ChronoDot_20141027 -> V4.0.1-20141120 ";
-// A little tweeking to get to work with new clock module from ebay $1.59 from Seller: accecity2008 
-// Works with both now, china module has memory also.
-// shows date at top of minute now with V4
-//
+const char *version="ChronoDot_20141027 -> V4.0.2-20141125 ";
 const long msec_repeat=500;
 const int num_regs = 19;
 const int DS3231_addr = 0x68; // DS3231 I2C address ChronoDot
-// const int DS3231_addr = 0x57; // DS3231 I2C address China Board
 unsigned long last_msec = 9999999; // initialize to weird value to assure quick first read
 unsigned long last_sec=0;
 
@@ -262,7 +267,7 @@ void write_Disp(int year,int month,int dom, int hours, int minutes, int seconds,
   int num_lo = minutes;
 
   if((msecs % 1000) < (int) 500) colon=0x80;
-  if(seconds >= 2 && seconds <= 5) {
+  if(seconds >= 3 && seconds <= 5) {
     num_hi = 20;
     num_lo = year;
     colon = 0;

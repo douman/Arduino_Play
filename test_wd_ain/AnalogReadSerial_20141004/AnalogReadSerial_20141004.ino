@@ -5,8 +5,9 @@
   modified by drm 20140525 to learn Arduino
  */
 #include <avr/wdt.h>
+#include <EEPROM.h>
 
-const unsigned long msec_delay=200;
+const unsigned long msec_delay=2000;
 const int led = 13;
 const char *version="AnalogReadSerial_20141004 -> V1.0.0-20141018";
 
@@ -18,12 +19,11 @@ int ain[num_ain];
 
 // the setup routine runs once when you press reset:
 void setup() {
+  Serial.begin(115200);
   pinMode(led, OUTPUT);
   digitalWrite(led, LOW);  
   watchdogSetup();
-  // initialize serial communication at 9600 bits per second:
-  Serial.begin(115200);
-  Serial.println(version);
+  drm_start_print();
 }
 
 void watchdogSetup(void)
@@ -83,7 +83,7 @@ void loop() {
   
   target = i * msec_delay * 1000;
   delta = (long) usec_time - (long) target;
-  avg_delta = (3*avg_delta)/4 + delta/4;
+  avg_delta = (9*avg_delta)/10 + delta/10;
 
   if(abs(delta) > 600) {
     if(delta > 0) {
@@ -129,3 +129,17 @@ char read_ain_print() {
   for (i=0; i<num_ain; i++) {Serial.print(ain[i]); Serial.print(" ");}
   Serial.print(")");
 }
+
+void drm_start_print() {
+  Serial.print(version); Serial.print(F(" SN#"));
+  Serial.println(drm_serialno());
+  Serial.print(F("Compiled-> "));
+  Serial.print(F(__DATE__)); 
+  Serial.print(F(" "));
+  Serial.println(F(__TIME__));
+}
+
+unsigned short drm_serialno() {
+  return(EEPROM.read(5) << 8 | EEPROM.read(6)); // combine two bytes into in serial number (drm specific)
+}
+
