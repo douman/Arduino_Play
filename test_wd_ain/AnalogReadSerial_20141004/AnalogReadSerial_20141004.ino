@@ -62,9 +62,7 @@ unsigned long i=0;
 long avg_delta=0;
   
 void loop() {
-
   wdt_reset();
-  
   if(wrap>0) {Serial.print(wrap); Serial.print("-wrap-");}
   
   Serial.print(i); 
@@ -80,7 +78,6 @@ void loop() {
   Serial.print(str+1); /* strip off the leading 1 to get msecs */
 
   char istat = read_ain_print();
-  
   target = i * msec_delay * 1000;
   delta = (long) usec_time - (long) target;
   avg_delta = (9*avg_delta)/10 + delta/10;
@@ -122,10 +119,10 @@ char read_ain_print() {
   }
   digitalWrite(led, LOW);  
   
-  Serial.print("--> A{");
+  Serial.print("--> A[");
   Serial.print(achs[0]);
   for (i=1; i<num_ain; i++) {Serial.print(","); Serial.print(achs[i]);}
-  Serial.print(")-> (");
+  Serial.print("]-> (");
   for (i=0; i<num_ain; i++) {Serial.print(ain[i]); Serial.print(" ");}
   Serial.print(")");
 }

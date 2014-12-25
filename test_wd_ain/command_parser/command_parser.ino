@@ -10,17 +10,16 @@
 const int led = 13;
 const unsigned int  cmd_sz=32;
 const unsigned int eeprom_sz=32;
-const char *version="command_parser -> V1.2.0-20141030";
+const char *version="command_parser -> V1.2.1-20141225";
 
 // the setup routine runs once upon reset
 void setup() {
   pinMode(led, OUTPUT);
   digitalWrite(led, LOW);  
   watchdogSetup();
-  // initialize serial communication at 9600 bits per second:
+  // initialize serial communication at 115200 bits per second:
   Serial.begin(115200);
-  Serial.print(version); Serial.print(" - SN#");
-  Serial.println(drm_serialno());
+  drm_Start_print();
 }
 
 // the loop routine runs over and over again forever:
@@ -105,6 +104,16 @@ void watchdogSetup(void)
   sei();
 }
 
-short drm_serialno() {
-  return(EEPROM.read(5) << 8 | EEPROM.read(6));
+
+void drm_Start_print() {
+  Serial.print(version); Serial.print(F(" SN#"));
+  Serial.println(drm_Serialno());
+  Serial.print(F("Compiled-> "));
+  Serial.print(F(__DATE__)); 
+  Serial.print(F(" "));
+  Serial.println(F(__TIME__));
+}
+
+unsigned short drm_Serialno() {
+  return(EEPROM.read(5) << 8 | EEPROM.read(6)); // combine two bytes into in serial number (drm specific)
 }
