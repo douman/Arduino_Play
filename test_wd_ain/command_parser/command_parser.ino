@@ -10,7 +10,7 @@
 const int led = 13;
 const unsigned int  cmd_sz=32;
 const unsigned int eeprom_sz=32;
-const char *version="command_parser -> V1.2.1-20141225";
+const char *version="command_parser -> V1.2.0-20141231";
 
 // the setup routine runs once upon reset
 void setup() {
@@ -57,7 +57,7 @@ byte execute_cmd(char *cmd) {
     Serial.println("\"Reset\" will write to EEPROM");
     Serial.println("Any other string will show EEPROM header contents");
   }
-  
+  drm_Start_print();
   for (i=0; i<eeprom_sz; i++) {
     inbyte = EEPROM.read(i);
     if(inbyte > 33 && inbyte < 128) Serial.print((char) inbyte);
