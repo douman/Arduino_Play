@@ -7,7 +7,9 @@
   modified by drm 20140525 to learn Arduino
  */
 #include <avr/wdt.h>
+#include <EEPROM.h>
 
+const char *version="AnalogReadSerial_20140527 -> V2.0-20150714";
 const unsigned long msec_delay=1000;
 
 // the setup routine runs once when you press reset:
@@ -15,6 +17,9 @@ void setup() {
   watchdogSetup();
   // initialize serial communication at 9600 bits per second:
   Serial.begin(115200);
+  Serial.print(version); Serial.print(" - SN#");
+  Serial.println(drm_serialno());
+
 }
 
 void watchdogSetup(void)
@@ -34,7 +39,7 @@ For 4000ms Time-out: WDP3 = 1; WDP2 = 0; WDP1 = 0; WDP0 = 0
 // Enter Watchdog Configuration mode:
 WDTCSR |= (1<<WDCE) | (1<<WDE);
 // Set Watchdog settings:
-WDTCSR = (1<<WDIE) | (1<<WDE) | (0<<WDP3) | (1<<WDP2) | (1<<WDP1) | (1<<WDP0);
+WDTCSR = (1<<WDIE) | (1<<WDE) | (1<<WDP3) | (0<<WDP2) | (0<<WDP1) | (0<<WDP0);
 sei();
 }
 
@@ -103,4 +108,8 @@ void loop() {
 
 void calc_adj(unsigned long target, unsigned long ms_time, unsigned int us_time, int *adj_ms, unsigned int *adj_us)
 {
+}
+
+short drm_serialno() {
+  return(EEPROM.read(5) << 8 | EEPROM.read(6));
 }

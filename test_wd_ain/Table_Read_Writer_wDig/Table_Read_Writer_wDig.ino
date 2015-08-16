@@ -18,7 +18,7 @@ void setup() {
   pinMode(led, OUTPUT);
   digitalWrite(led, LOW);  
   watchdogSetup();
-  // initialize serial communication at 9600 bits per second:
+  // initialize serial communication at 115200 bits per second:
   Serial.begin(115200);
   // Serial.begin(1200);
   Serial.print(version); Serial.print(" - SN#");

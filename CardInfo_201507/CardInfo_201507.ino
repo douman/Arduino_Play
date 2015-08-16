@@ -1,4 +1,4 @@
-/*
+f/*
   SD card test
 
  This example shows how use the utility libraries on which the'
