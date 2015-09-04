@@ -14,6 +14,7 @@
  * 10006 is 5v china mini Pro 
  * 10007 is 5v china mini Pro with all headers
  * 10008 is 5v china mini Pro
+ * 10009 is 3.3v mini Pro (sparkfun)
  */
 
 #include <EEPROM.h>
@@ -25,7 +26,7 @@ const char *version="eeprom_drm_serial_write -> V1.0.3-20141225";
 int high_byte = 5;
 int low_byte = 6;
 // Serial number to be written
-int serial = 10008;
+int serial = 10009;
 
 void setup()
 {

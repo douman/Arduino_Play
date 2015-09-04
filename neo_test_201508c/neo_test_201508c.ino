@@ -20,7 +20,7 @@
   #include <avr/power.h>
 #endif
 
-const char *version="neo_test_201508a -> V0.0-20150814 ";
+const char *version="neo_test_201508C -> V1.0-20150816 ";
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1
 #define PIN            6
@@ -29,14 +29,20 @@ const char *version="neo_test_201508a -> V0.0-20150814 ";
 #define NUMPIXELS      144
 
 // Maximum intensity setting
-#define INTENMAX 150
+#define INTENMIN 50
+#define INTENMAX 51
+#define INTENINC 5
+
+// LED on time
+#define DELAYVAL1  500
+
+// LED off time
+#define DELAYVAL2  1000
 
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
 // Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
 // example for more information on possible values.
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-
-int delayval = 0; // delay between writes
 
 void setup() 
 {
@@ -56,7 +62,7 @@ void loop() {
     g=((n&2)!=0);
     b=((n&4)!=0);    
     
-    for(int m=1; m<min(255,INTENMAX); m+=29)
+    for(int m=INTENMIN; m<min(255,INTENMAX); m+=INTENINC)
     {
       /*
       Serial.print("n=");
@@ -75,11 +81,11 @@ void loop() {
     
       } // i
       pixels.show(); // This sends the updated pixel color to the hardware.
-  
-      delay(delayval); // Delay for a period of time (in milliseconds).
+      delay(DELAYVAL1); // Delay for a period of time (in milliseconds)
+      pixels.clear();
+      pixels.show();
+      delay(DELAYVAL2);
     } // m
-    pixels.clear();
-    delay(delayval*100+100);
   }
 }
 void drm_Start_print() 
