@@ -5,8 +5,8 @@
 #include <EEPROM.h>
 
 #define DHTPIN 5     // DHT pin
-#define ADC_DELAY 0 // delay between ADC measurements (ms)
-#define DHT_DELAY 4000 // delay between DHT measurements (ms)
+#define ADC_DELAY 2 // delay between ADC measurements (ms)
+#define DHT_DELAY 1500 // delay between DHT measurements (ms)
 
 // Uncomment whatever type you're using!
 //#define DHTTYPE DHT11   // DHT 11
@@ -27,6 +27,8 @@ const char *version="DHT_el_al_20150823 -> V1.0-20150823 ";
 // tweak the timings for faster processors.  This parameter is no longer needed
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
+// DHT dht(DHTPIN, DHTTYPE, 60); // added 3rd parameter "60" per note in adafuit support forums
+                              // doesn't improve "good read rate
 
 long dhtGood = 0, dhtBad = 0;
 
@@ -36,9 +38,9 @@ void setup()
 {
   start_millis = millis();
   Serial.begin(115200);
-  Serial.print("start_millis: "); Serial.println(start_millis);
   // Serial.println("DHTxx test!");
   drm_Start_print();
+  Serial.print("start_millis: "); Serial.println(start_millis);
   Serial.print("Starting at-> ");
   printTime(millis()); Serial.println();
   dht.begin();
@@ -46,9 +48,6 @@ void setup()
 }
 
 void loop() {
-  // Wait a few seconds between measurements.
-  delay(DHT_DELAY);
-
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
@@ -58,46 +57,49 @@ void loop() {
   float f = dht.readTemperature(true);
 
   // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f)) {
+  if (isnan(h) || isnan(t) || isnan(f)) 
+  {
     Serial.println("Failed to read from DHT sensor!");
     dhtBad++;
-    return;
   }
-  dhtGood++;
+  else
+  {
+    dhtGood++;
+  
+    // I really do not care about the heat index
+    // Compute heat index in Fahrenheit (the default)
+    /*
+    float hif = dht.computeHeatIndex(f, h);
+    // Compute heat index in Celsius (isFahreheit = false)
+    float hic = dht.computeHeatIndex(t, h, false);
+    */
+  
+    Serial.println();
+    printTime(millis());
+    Serial.print("Good: ");
+    Serial.print(dhtGood);
+    Serial.print(" \t");
+    Serial.print("Bad: ");
+    Serial.println(dhtBad);
 
-  // Compute heat index in Fahrenheit (the default)
-  float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  float hic = dht.computeHeatIndex(t, h, false);
-
-  printTime(millis());
-  Serial.print("Good: ");
-  Serial.print(dhtGood);
-  Serial.print(" \t");
-  Serial.print("Bad: ");
-  Serial.print(dhtBad);
-  Serial.print(" \t");
-  Serial.print("Hum: ");
-  Serial.print(h);
-  Serial.print(" %\t");
-  Serial.print("Temp: ");
-  Serial.print(t);
-  Serial.print(" *C ");
-  Serial.print(f);
-  Serial.print(" *F\t");
-  Serial.print("HI: ");
-  Serial.print(hic);
-  Serial.print(" *C ");
-  Serial.print(hif);
-  Serial.println(" *F");
-
-  int sensorValue, numAvg=25;
+    Serial.print("Hum: ");
+    Serial.print(h);
+    Serial.print(" %\t");
+    Serial.print("Temp: ");
+    Serial.print(t);
+    Serial.print(" *C ");
+    Serial.print(f);
+    Serial.println(" *F\t");
+  }
+  int sensorValue, numAvg=20;
   long sensorSum = 0;
   sensorSum = 0;
+
   // read and print the input on analog pin 0:
   for(int i=0; i<numAvg; i++)
   {
     sensorValue = analogRead(A0);
+    Serial.print(sensorValue); Serial.print(" ");
     sensorSum = sensorSum + (long) sensorValue;
 /*
     Serial.print(i);
@@ -112,19 +114,26 @@ void loop() {
  */
     delay(ADC_DELAY);
   }
+  Serial.println();
+  
+  float A0_mV = (3.45 * (float) sensorSum / (float) numAvg)/1.024; //adjusted ref voltage to calibrate temperature to Taylor digital thermometerf
+  float tmp36_deg_c = (A0_mV/10.0) - 50.0;
   Serial.print("Avg");
   Serial.print(" - ");
   Serial.print("A{Avg}-> {"); 
-  Serial.print(sensorSum=sensorSum/((long)numAvg)); 
+  Serial.print((float)sensorSum/(float)numAvg); 
   Serial.print(" / ");
-  Serial.print((33*(long)sensorSum)/10); 
+  Serial.print(A0_mV); 
   Serial.print("mV / ");
   Serial.print(" \t");
-  Serial.print(" \t");
-  Serial.print("      ");
-  Serial.print(((33*(long)sensorSum)/10)-500); 
-  Serial.println("(deg C*10)}");
+  Serial.print(tmp36_deg_c); 
+  Serial.print(" deg C\t");
+  Serial.print((tmp36_deg_c*9.0/5.0)+32.0);
+  Serial.print(" deg F} Delta DHT vs TMP36 = ");
+  Serial.println(t - tmp36_deg_c);
 
+  // Wait a few seconds between measurements.
+  delay(DHT_DELAY);
 }
 void printTime(unsigned long milli_time)
 {
@@ -135,10 +144,13 @@ void printTime(unsigned long milli_time)
   unsigned long diff = milli_time - start_millis;
   Serial.print(diff/ms_d); Serial.print("- ");
   diff = diff - ms_d*(diff/ms_d);
+  if(diff/ms_hr<10) Serial.print("0");
   Serial.print(diff/ms_hr); Serial.print(":");
   diff = diff - ms_hr*(diff/ms_hr);
+  if(diff/ms_min<10) Serial.print("0");
   Serial.print(diff/ms_min); Serial.print(":");
   diff = diff - ms_min*(diff/ms_min);
+  if(diff/ms_sec<10) Serial.print("0");
   Serial.print(diff/ms_sec); Serial.print(" \t");
 }
 void drm_Start_print() 
