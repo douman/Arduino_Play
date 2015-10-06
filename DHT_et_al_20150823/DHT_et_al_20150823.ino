@@ -4,8 +4,9 @@
 #include "DHT.h"
 #include <EEPROM.h>
 
+#define ADC_PIN A0
 #define DHTPIN 5     // DHT pin
-#define ADC_DELAY 2 // delay between ADC measurements (ms)
+#define ADC_DELAY 20 // delay between ADC measurements (ms)
 #define DHT_DELAY 1500 // delay between DHT measurements (ms)
 
 // Uncomment whatever type you're using!
@@ -13,7 +14,7 @@
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
-const char *version="DHT_el_al_20150823 -> V1.0-20150823 ";
+const char *version="DHT_el_al_20150823 -> V1.3-20150924 ";
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -44,16 +45,19 @@ void setup()
   Serial.print("Starting at-> ");
   printTime(millis()); Serial.println();
   dht.begin();
-  pinMode(A0,INPUT);
+  pinMode(ADC_PIN,INPUT);
 }
 
 void loop() {
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  delay(DHT_DELAY);
   float h = dht.readHumidity();
   // Read temperature as Celsius (the default)
+  delay(DHT_DELAY);
   float t = dht.readTemperature();
   // Read temperature as Fahrenheit (isFahrenheit = true)
+  delay(DHT_DELAY);
   float f = dht.readTemperature(true);
 
   // Check if any reads failed and exit early (to try again).
@@ -98,7 +102,7 @@ void loop() {
   // read and print the input on analog pin 0:
   for(int i=0; i<numAvg; i++)
   {
-    sensorValue = analogRead(A0);
+    sensorValue = analogRead(ADC_PIN);
     Serial.print(sensorValue); Serial.print(" ");
     sensorSum = sensorSum + (long) sensorValue;
 /*
@@ -112,18 +116,18 @@ void loop() {
     Serial.print(((33*(long)sensorValue)/10)-500); 
     Serial.println("(deg C*10)}");
  */
-    delay(ADC_DELAY);
+    delay(ADC_DELAY/2);
   }
   Serial.println();
   
-  float A0_mV = (3.45 * (float) sensorSum / (float) numAvg)/1.024; //adjusted ref voltage to calibrate temperature to Taylor digital thermometerf
-  float tmp36_deg_c = (A0_mV/10.0) - 50.0;
+  float ADC_PIN_mV = (3.45 * (float) sensorSum / (float) numAvg)/1.024; //adjusted ref voltage to calibrate temperature to Taylor digital thermometerf
+  float tmp36_deg_c = (ADC_PIN_mV/10.0) - 50.0;
   Serial.print("Avg");
   Serial.print(" - ");
   Serial.print("A{Avg}-> {"); 
   Serial.print((float)sensorSum/(float)numAvg); 
   Serial.print(" / ");
-  Serial.print(A0_mV); 
+  Serial.print(ADC_PIN_mV); 
   Serial.print("mV / ");
   Serial.print(" \t");
   Serial.print(tmp36_deg_c); 
@@ -133,7 +137,7 @@ void loop() {
   Serial.println(t - tmp36_deg_c);
 
   // Wait a few seconds between measurements.
-  delay(DHT_DELAY);
+  // delay(DHT_DELAY);
 }
 void printTime(unsigned long milli_time)
 {
