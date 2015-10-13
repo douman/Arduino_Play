@@ -8,13 +8,15 @@
 #define DHTPIN 5     // DHT pin
 #define ADC_DELAY 20 // delay between ADC measurements (ms)
 #define DHT_DELAY 1500 // delay between DHT measurements (ms)
+#define V_REF 3.45  // Reference voltage for 3.3V supply
+// #define V_REF 5.0  // Reference voltage for 5V supply
 
 // Uncomment whatever type you're using!
 //#define DHTTYPE DHT11   // DHT 11
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
-const char *version="DHT_el_al_20150823 -> V1.3-20150924 ";
+const char *version="DHT_el_al_20150823 -> V1.3-20151012 ";
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -103,7 +105,7 @@ void loop() {
   for(int i=0; i<numAvg; i++)
   {
     sensorValue = analogRead(ADC_PIN);
-    Serial.print(sensorValue); Serial.print(" ");
+    // Serial.print(sensorValue); Serial.print(" ");
     sensorSum = sensorSum + (long) sensorValue;
 /*
     Serial.print(i);
@@ -118,9 +120,9 @@ void loop() {
  */
     delay(ADC_DELAY/2);
   }
-  Serial.println();
+  // Serial.println();
   
-  float ADC_PIN_mV = (3.45 * (float) sensorSum / (float) numAvg)/1.024; //adjusted ref voltage to calibrate temperature to Taylor digital thermometerf
+  float ADC_PIN_mV = (V_REF * (float) sensorSum / (float) numAvg)/1.024; //adjusted ref voltage to calibrate temperature to Taylor digital thermometerf
   float tmp36_deg_c = (ADC_PIN_mV/10.0) - 50.0;
   Serial.print("Avg");
   Serial.print(" - ");

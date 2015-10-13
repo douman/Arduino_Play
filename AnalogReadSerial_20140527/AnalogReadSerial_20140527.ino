@@ -18,7 +18,7 @@ void setup() {
   // initialize serial communication at 9600 bits per second:
   Serial.begin(115200);
   Serial.print(version); Serial.print(" - SN#");
-  Serial.println(drm_serialno());
+  Serial.println(drm_Serialno());
 
 }
 
@@ -110,6 +110,6 @@ void calc_adj(unsigned long target, unsigned long ms_time, unsigned int us_time,
 {
 }
 
-short drm_serialno() {
-  return(EEPROM.read(5) << 8 | EEPROM.read(6));
+unsigned short drm_Serialno() {
+  return(EEPROM.read(5) << 8 | EEPROM.read(6)); // combine two bytes into in serial number (drm specific)
 }

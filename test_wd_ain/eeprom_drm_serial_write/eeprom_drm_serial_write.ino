@@ -16,18 +16,19 @@
  * 10008 is 5v china mini Pro
  * 10009 is 3.3v mini Pro (sparkfun)
  * 10010 is 5v uno clone from china 20150915
+ * 10011 is 3.3 china Pro mini (backwards serial connector)
  */
 
 #include <EEPROM.h>
 
-const char *version="eeprom_drm_serial_write -> V1.0.3-20141225";
+const char *version="eeprom_drm_serial_write -> V1.0.4-20151010";
 
 // the current address in the EEPROM (i.e. which byte
 // we're going to write to next)
 int high_byte = 5;
 int low_byte = 6;
 // Serial number to be written
-int serial = 10010;
+int serial = 10011;
 
 void setup()
 {
