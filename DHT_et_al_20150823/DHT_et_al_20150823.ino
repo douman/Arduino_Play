@@ -1,5 +1,5 @@
 // Example testing sketch for various DHT humidity/temperature sensors
-// Written by ladyada, public domain
+// Written by ladyada, public domain -- modified heavily by drm 20151013
 
 #include "DHT.h"
 #include <EEPROM.h>
@@ -16,7 +16,7 @@
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
-const char *version="DHT_el_al_20150823 -> V1.3-20151012 ";
+const char *version="DHT_el_al_20150823 -> V1.4-20151013 ";
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -24,14 +24,16 @@ const char *version="DHT_el_al_20150823 -> V1.3-20151012 ";
 // Connect pin 2 of the sensor to whatever your DHTPIN is
 // Connect pin 4 (on the right) of the sensor to GROUND
 // Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
+// DHT22 works better with no 10k resistor (just the Arduino Pro Mini pullup) drm
 
 // Initialize DHT sensor.
 // Note that older versions of this library took an optional third parameter to
 // tweak the timings for faster processors.  This parameter is no longer needed
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
-DHT dht(DHTPIN, DHTTYPE);
+
 // DHT dht(DHTPIN, DHTTYPE, 60); // added 3rd parameter "60" per note in adafuit support forums
-                              // doesn't improve "good read rate
+                              // doesn't improve "good read rate drm 20151010
+DHT dht(DHTPIN, DHTTYPE);
 
 long dhtGood = 0, dhtBad = 0;
 
@@ -80,6 +82,7 @@ void loop() {
     float hic = dht.computeHeatIndex(t, h, false);
     */
   
+/* Delay the print until the other sensor data is also available drm 20151013
     Serial.println();
     printTime(millis());
     Serial.print("Good: ");
@@ -96,6 +99,7 @@ void loop() {
     Serial.print(" *C ");
     Serial.print(f);
     Serial.println(" *F\t");
+ */
   }
   int sensorValue, numAvg=20;
   long sensorSum = 0;
@@ -122,6 +126,23 @@ void loop() {
   }
   // Serial.println();
   
+  Serial.println();
+  printTime(millis());
+  Serial.print("Good: ");
+  Serial.print(dhtGood);
+  Serial.print(" \t");
+  Serial.print("Bad: ");
+  Serial.println(dhtBad);
+
+  Serial.print("Hum: ");
+  Serial.print(h);
+  Serial.print(" %\t");
+  Serial.print("Temp: ");
+  Serial.print(t);
+  Serial.print(" *C ");
+  Serial.print(f);
+  Serial.println(" *F\t");
+
   float ADC_PIN_mV = (V_REF * (float) sensorSum / (float) numAvg)/1.024; //adjusted ref voltage to calibrate temperature to Taylor digital thermometerf
   float tmp36_deg_c = (ADC_PIN_mV/10.0) - 50.0;
   Serial.print("Avg");
