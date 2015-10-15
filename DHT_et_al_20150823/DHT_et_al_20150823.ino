@@ -17,7 +17,7 @@
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
-const char *version="DHT_el_al_20150823 -> V1.5-20151014 ";
+const char *version="DHT_el_al_20150823 -> V1.6-20151015 ";
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -46,11 +46,21 @@ void setup()
   Serial.begin(115200);
   // Serial.println("DHTxx test!");
   drm_Start_print();
+  
+  pinMode(DHTPIN,OUTPUT);
+  digitalWrite(DHTPIN,LOW);
+
+  delay(DHT_DELAY);
+/*  pinMode(DHTPIN,INPUT_PULLUP);
+  digitalWrite(DHTPIN,HIGH);
+ */
+
+  pinMode(DHTPIN,INPUT);
+  pinMode(ADC_PIN,INPUT);
   Serial.print("start_millis: "); Serial.println(start_millis);
   Serial.print("Starting at-> ");
   printTime(millis()); Serial.println();
   dht.begin();
-  pinMode(ADC_PIN,INPUT_PULLUP);
 }
 
 void loop() {
