@@ -8,15 +8,16 @@
 #define DHTPIN 5     // DHT pin
 #define ADC_DELAY 20 // delay between ADC measurements (ms)
 #define DHT_DELAY 1500 // delay between DHT measurements (ms)
-#define V_REF 3.45  // Reference voltage for 3.3V supply
+// #define V_REF 3.45  // Reference voltage for 3.3V supply
 // #define V_REF 5.0  // Reference voltage for 5V supply
+#define V_REF 3.18  // Reference voltage for 3.3V supply
 
 // Uncomment whatever type you're using!
 //#define DHTTYPE DHT11   // DHT 11
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
-const char *version="DHT_el_al_20150823 -> V1.4-20151013 ";
+const char *version="DHT_el_al_20150823 -> V1.5-20151014 ";
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -49,7 +50,7 @@ void setup()
   Serial.print("Starting at-> ");
   printTime(millis()); Serial.println();
   dht.begin();
-  pinMode(ADC_PIN,INPUT);
+  pinMode(ADC_PIN,INPUT_PULLUP);
 }
 
 void loop() {
