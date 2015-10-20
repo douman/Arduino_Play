@@ -7,10 +7,10 @@
 #define ADC_PIN A0
 #define DHTPIN 5     // DHT pin
 #define ADC_DELAY 20 // delay between ADC measurements (ms)
-#define DHT_DELAY 1500 // delay between DHT measurements (ms)
+#define DHT_DELAY 300 // delay between DHT measurements (ms)
 // #define V_REF 3.45  // Reference voltage for 3.3V supply
 // #define V_REF 5.0  // Reference voltage for 5V supply
-#define V_REF 3.18  // Reference voltage for 3.3V supply
+#define V_REF 3.425  // Reference voltage for 3.3V supply
 
 // Uncomment whatever type you're using!
 //#define DHTTYPE DHT11   // DHT 11
@@ -50,7 +50,7 @@ void setup()
   pinMode(DHTPIN,OUTPUT);
   digitalWrite(DHTPIN,LOW);
 
-  delay(DHT_DELAY);
+  delay(5*DHT_DELAY);
 /*  pinMode(DHTPIN,INPUT_PULLUP);
   digitalWrite(DHTPIN,HIGH);
  */
