@@ -4,25 +4,29 @@
 #include "DHT.h"
 #include <EEPROM.h>
 
+#define LED_PIN 13
 #define ADC_PIN A0
-#define DHTPIN 5     // DHT pin
+#define DHT_PIN 5     // DHT pin
 #define ADC_DELAY 20 // delay between ADC measurements (ms)
 #define DHT_DELAY 300 // delay between DHT measurements (ms)
 // #define V_REF 3.45  // Reference voltage for 3.3V supply
 // #define V_REF 5.0  // Reference voltage for 5V supply
-#define V_REF 3.425  // Reference voltage for 3.3V supply
+// #define V_REF 3.425  // Reference voltage for 3.3V supply
+#define V_REF 3.33  // Reference voltage for 3.3V supply
 
 // Uncomment whatever type you're using!
-//#define DHTTYPE DHT11   // DHT 11
-#define DHTTYPE DHT22   // DHT 22  (AM2302)
-//#define DHTTYPE DHT21   // DHT 21 (AM2301)
+//#define DHT_TYPE DHT11   // DHT 11
+#define DHT_TYPE DHT22   // DHT 22  (AM2302)
+//#define DHT_TYPE DHT21   // DHT 21 (AM2301)
 
-const char *version="DHT_el_al_20150823 -> V1.6-20151015 ";
+const char *version="DHT_el_al_20150823 -> V1.7-20151026 ";
+
+// V1.7 blinks the LED when DHT read is successful
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
 // to 3.3V instead of 5V!
-// Connect pin 2 of the sensor to whatever your DHTPIN is
+// Connect pin 2 of the sensor to whatever your DHT_PIN is
 // Connect pin 4 (on the right) of the sensor to GROUND
 // Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
 // DHT22 works better with no 10k resistor (just the Arduino Pro Mini pullup) drm
@@ -32,9 +36,9 @@ const char *version="DHT_el_al_20150823 -> V1.6-20151015 ";
 // tweak the timings for faster processors.  This parameter is no longer needed
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 
-// DHT dht(DHTPIN, DHTTYPE, 60); // added 3rd parameter "60" per note in adafuit support forums
+// DHT dht(DHT_PIN, DHT_TYPE, 60); // added 3rd parameter "60" per note in adafuit support forums
                               // doesn't improve "good read rate drm 20151010
-DHT dht(DHTPIN, DHTTYPE);
+DHT dht(DHT_PIN, DHT_TYPE);
 
 long dhtGood = 0, dhtBad = 0;
 
@@ -47,16 +51,18 @@ void setup()
   // Serial.println("DHTxx test!");
   drm_Start_print();
   
-  pinMode(DHTPIN,OUTPUT);
-  digitalWrite(DHTPIN,LOW);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+  pinMode(DHT_PIN, OUTPUT);
+  digitalWrite(DHT_PIN, LOW);
 
   delay(5*DHT_DELAY);
-/*  pinMode(DHTPIN,INPUT_PULLUP);
-  digitalWrite(DHTPIN,HIGH);
+/*  pinMode(DHT_PIN,INPUT_PULLUP);
+  digitalWrite(DHT_PIN,HIGH);
  */
 
-  pinMode(DHTPIN,INPUT);
-  pinMode(ADC_PIN,INPUT);
+  pinMode(DHT_PIN, INPUT);
+  pinMode(ADC_PIN, INPUT);
   Serial.print("start_millis: "); Serial.println(start_millis);
   Serial.print("Starting at-> ");
   printTime(millis()); Serial.println();
@@ -84,6 +90,7 @@ void loop() {
   else
   {
     dhtGood++;
+    digitalWrite(LED_PIN, HIGH); // good read, turn on the LED
   
     // I really do not care about the heat index
     // Compute heat index in Fahrenheit (the default)
@@ -169,7 +176,7 @@ void loop() {
   Serial.print((tmp36_deg_c*9.0/5.0)+32.0);
   Serial.print(" deg F} Delta DHT vs TMP36 = ");
   Serial.println(t - tmp36_deg_c);
-
+  digitalWrite(LED_PIN, LOW); // Turn off the LED (if the DHT read was good, it is on)
   // Wait a few seconds between measurements.
   // delay(DHT_DELAY);
 }
