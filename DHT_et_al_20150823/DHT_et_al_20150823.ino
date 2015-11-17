@@ -12,7 +12,7 @@
 // #define V_REF 3.45  // Reference voltage for 3.3V supply
 // #define V_REF 5.0  // Reference voltage for 5V supply
 // #define V_REF 3.425  // Reference voltage for 3.3V supply
-#define V_REF 3.33  // Reference voltage for 3.3V supply
+#define V_REF 3.415  // Reference voltage for 3.3V supply
 
 // Uncomment whatever type you're using!
 //#define DHT_TYPE DHT11   // DHT 11
@@ -200,6 +200,7 @@ void printTime(unsigned long milli_time)
 }
 void drm_Start_print() 
 {
+  delay(500); // delay briefly to let logger start
   Serial.print(version); Serial.print(F(" SN#"));
   Serial.println(drm_Serialno());
   Serial.print(F("Compiled-> "));
