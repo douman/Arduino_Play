@@ -17,6 +17,13 @@
  * 10009 is 3.3v mini Pro (sparkfun)
  * 10010 is 5v uno clone from china 20150915
  * 10011 is 3.3 china Pro mini (backwards serial connector)
+ * 
+ * RTC Serial Numbers
+ * 20000 is RTC000 
+ * 20001 is RTC001 installed with Pi 2 in bedroom
+ * 20002 is RTC002 installed with weather station
+ * 20003 is RTC003 installed with DHT & TMP36 prototype
+ * 
  */
 
 #include <EEPROM.h>
@@ -25,24 +32,31 @@ const char *version="eeprom_drm_serial_write -> V1.0.4-20151010";
 
 // the current address in the EEPROM (i.e. which byte
 // we're going to write to next)
-int high_byte = 5;
-int low_byte = 6;
+const int SERIAL_HIGH_BYTE = 5;
+const int SERIAL_LOW_BYTE = 6;
 // Serial number to be written
-int serial = 10011;
+int serial = 10002;
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(19200);
   drm_Start_print();
 }
 
 void loop()
 {
+  byte read_char;
+  
   Serial.print(" - SN#");
   Serial.println(drm_Serialno());
-  if(EEPROM.read(high_byte) != (serial >> 8)) EEPROM.write(high_byte, serial >> 8);
-  if(EEPROM.read(low_byte) != (serial & 255)) EEPROM.write(low_byte, serial & 255);
-  for (int i=low_byte+1; i<100; i++) if(EEPROM.read(i) != i) EEPROM.write(i, i);
+  if(Serial.available()) read_char = Serial.read();
+  if(read_char == 'w')
+  {
+    if(EEPROM.read(SERIAL_HIGH_BYTE) != (serial >> 8)) EEPROM.write(SERIAL_HIGH_BYTE, serial >> 8);
+    if(EEPROM.read(SERIAL_LOW_BYTE) != (serial & 255)) EEPROM.write(SERIAL_LOW_BYTE, serial & 255);
+    for (int i=SERIAL_LOW_BYTE+1; i<100; i++) if(EEPROM.read(i) != i) EEPROM.write(i, i);
+    read_char = NULL;
+  }
   delay(2000);
 }
 
