@@ -1,11 +1,9 @@
-#define ONTIME 1000
-#define OFFTIME 1000
+#define ONTIME 10
+#define OFFTIME 80
 /*
   Blink
  Turns on an LED on for one second, then off for one second, repeatedly.
- 
- This example code is in the public domain.
- */
+  */
 
 // Pin 13 has an LED connected on most Arduino boards.
 // give it a name:
@@ -21,6 +19,7 @@ void setup() {
 // the loop routine runs over and over again forever:
 void loop() {
   int i;
+#ifdef OLD  
   for (i=0;i<5;i++)
   {
     digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
@@ -44,5 +43,12 @@ void loop() {
   }
   for (i=0;i<10;i++) {digitalWrite(led, HIGH); delay(50); digitalWrite(led, LOW); delay(50);}
   j++;
+#else
+  digitalWrite(13, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(ONTIME);              // wait for a second
+  digitalWrite(13, LOW);    // turn the LED off by making the voltage LOW
+  delay(OFFTIME);              // wait for a second
+#endif
+
 }
 

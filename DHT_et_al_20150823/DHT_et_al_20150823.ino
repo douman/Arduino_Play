@@ -1,8 +1,8 @@
-// Example testing sketch for various DHT humidity/temperature sensors
-// Written by ladyada, public domain -- modified heavily by drm 20151013
+// Doug's DHT and TMP36 reader/reporter
+// Derived from example written by ladyada, public domain -- modified heavily by drm 20151013
 
 #include "DHT.h"
-#include <EEPROM.h>
+#include <drmLib.h>
 
 #define LED_PIN 13
 #define ADC_PIN A0
@@ -10,18 +10,21 @@
 #define ADC_DELAY 20 // delay between ADC measurements (ms)
 #define DHT_DELAY 300 // delay between DHT measurements (ms)
 // #define V_REF 3.45  // Reference voltage for 3.3V supply
-// #define V_REF 5.0  // Reference voltage for 5V supply
 // #define V_REF 3.425  // Reference voltage for 3.3V supply
 #define V_REF 3.415  // Reference voltage for 3.3V supply
+#define V_REF 1.04  // Reference voltage from Atmega328
+// #define V_REF 5.0  // Reference voltage for 5V supply
 
 // Uncomment whatever type you're using!
 //#define DHT_TYPE DHT11   // DHT 11
 #define DHT_TYPE DHT22   // DHT 22  (AM2302)
 //#define DHT_TYPE DHT21   // DHT 21 (AM2301)
 
-const char *version="DHT_el_al_20150823 -> V1.7-20151026 ";
+const char *VER="DHT_el_al_20150823 -> V1.8-20151220 ";
 
 // V1.7 blinks the LED when DHT read is successful
+// V1.8 adjusted to use internal reference (Value of 1.04 detirmined using Fluke DVM)
+//      and now using drmLib for utility functions
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -48,8 +51,7 @@ void setup()
 {
   start_millis = millis();
   Serial.begin(115200);
-  // Serial.println("DHTxx test!");
-  drm_Start_print();
+  drmStartPrint(VER);
   
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
@@ -63,9 +65,11 @@ void setup()
 
   pinMode(DHT_PIN, INPUT);
   pinMode(ADC_PIN, INPUT);
+  analogReference(INTERNAL);
+//  analogReference(EXTERNAL);
   Serial.print("start_millis: "); Serial.println(start_millis);
   Serial.print("Starting at-> ");
-  printTime(millis()); Serial.println();
+  printTime(millis() - start_millis); Serial.println();
   dht.begin();
 }
 
@@ -91,33 +95,6 @@ void loop() {
   {
     dhtGood++;
     digitalWrite(LED_PIN, HIGH); // good read, turn on the LED
-  
-    // I really do not care about the heat index
-    // Compute heat index in Fahrenheit (the default)
-    /*
-    float hif = dht.computeHeatIndex(f, h);
-    // Compute heat index in Celsius (isFahreheit = false)
-    float hic = dht.computeHeatIndex(t, h, false);
-    */
-  
-/* Delay the print until the other sensor data is also available drm 20151013
-    Serial.println();
-    printTime(millis());
-    Serial.print("Good: ");
-    Serial.print(dhtGood);
-    Serial.print(" \t");
-    Serial.print("Bad: ");
-    Serial.println(dhtBad);
-
-    Serial.print("Hum: ");
-    Serial.print(h);
-    Serial.print(" %\t");
-    Serial.print("Temp: ");
-    Serial.print(t);
-    Serial.print(" *C ");
-    Serial.print(f);
-    Serial.println(" *F\t");
- */
   }
   int sensorValue, numAvg=20;
   long sensorSum = 0;
@@ -127,25 +104,13 @@ void loop() {
   for(int i=0; i<numAvg; i++)
   {
     sensorValue = analogRead(ADC_PIN);
-    // Serial.print(sensorValue); Serial.print(" ");
     sensorSum = sensorSum + (long) sensorValue;
-/*
-    Serial.print(i);
-    Serial.print(" - ");
-    Serial.print("A{0}-> {"); 
-    Serial.print(sensorValue); 
-    Serial.print(" / ");
-    Serial.print((33*(long)sensorValue)/10); 
-    Serial.print("mV / ");
-    Serial.print(((33*(long)sensorValue)/10)-500); 
-    Serial.println("(deg C*10)}");
- */
+
     delay(ADC_DELAY/2);
   }
-  // Serial.println();
   
   Serial.println();
-  printTime(millis());
+  printTime(millis() - start_millis);
   Serial.print("Good: ");
   Serial.print(dhtGood);
   Serial.print(" \t");
@@ -178,37 +143,4 @@ void loop() {
   Serial.println(t - tmp36_deg_c);
   digitalWrite(LED_PIN, LOW); // Turn off the LED (if the DHT read was good, it is on)
   // Wait a few seconds between measurements.
-  // delay(DHT_DELAY);
 }
-void printTime(unsigned long milli_time)
-{
-  const long ms_d =86400000; 
-  const long ms_hr = 3600000;
-  const long ms_min = 60000;
-  const long ms_sec = 1000;
-  unsigned long diff = milli_time - start_millis;
-  Serial.print(diff/ms_d); Serial.print("- ");
-  diff = diff - ms_d*(diff/ms_d);
-  if(diff/ms_hr<10) Serial.print("0");
-  Serial.print(diff/ms_hr); Serial.print(":");
-  diff = diff - ms_hr*(diff/ms_hr);
-  if(diff/ms_min<10) Serial.print("0");
-  Serial.print(diff/ms_min); Serial.print(":");
-  diff = diff - ms_min*(diff/ms_min);
-  if(diff/ms_sec<10) Serial.print("0");
-  Serial.print(diff/ms_sec); Serial.print(" \t");
-}
-void drm_Start_print() 
-{
-  delay(500); // delay briefly to let logger start
-  Serial.print(version); Serial.print(F(" SN#"));
-  Serial.println(drm_Serialno());
-  Serial.print(F("Compiled-> "));
-  Serial.print(F(__DATE__)); 
-  Serial.print(F(" "));
-  Serial.println(F(__TIME__));
-}
-unsigned short drm_Serialno() {
-  return(EEPROM.read(5) << 8 | EEPROM.read(6)); // combine two bytes into in serial number (drm specific)
-}
-
