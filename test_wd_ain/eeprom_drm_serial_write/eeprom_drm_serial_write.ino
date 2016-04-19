@@ -17,6 +17,8 @@
  * 10009 is 3.3v mini Pro (sparkfun)
  * 10010 is 5v uno clone from china 20150915
  * 10011 is 3.3 china Pro mini (backwards serial connector)
+ * 10012 is china Uno 20160418
+ * 10013 is china Uno 20160418
  * 
  * RTC Serial Numbers
  * 20000 is RTC000 
@@ -35,7 +37,7 @@ const char *version="eeprom_drm_serial_write -> V1.0.4-20151010";
 const int SERIAL_HIGH_BYTE = 5;
 const int SERIAL_LOW_BYTE = 6;
 // Serial number to be written
-int serial = 10002;
+int serial = 10013;
 
 void setup()
 {

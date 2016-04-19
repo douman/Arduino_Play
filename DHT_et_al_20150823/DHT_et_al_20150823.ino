@@ -25,6 +25,7 @@ const char *VER="DHT_el_al_20150823 -> V1.8-20151220 ";
 // V1.7 blinks the LED when DHT read is successful
 // V1.8 adjusted to use internal reference (Value of 1.04 detirmined using Fluke DVM)
 //      and now using drmLib for utility functions
+// V2.0 in process, going to add RTC for time reading and look into adding this to Weather Shield 
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
