@@ -1,7 +1,7 @@
 // Color Sensor
 // drm 20160530
 // V0.9 Just sketching out the rough outline
-const char *version="Color_Sensor -> V0.9-20160530 ";
+const char *version="Color_Sensor -> V1.0-20160530 ";
 #define OUT 3
 #define S0 A3
 #define S1 A4
