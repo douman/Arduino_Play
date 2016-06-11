@@ -21,13 +21,13 @@ const char *version="M0_Feather_GPS -> V0.9-20160610 ";
 
 // Define pins for M0 Feather BLE DiverLogger
 #define BATT          A7
-#define GPSPPSINT     7
+#define GPSPPSINT     11
 #define ACCINT        8
 #define MICIN         A10
 #define GPSRX         16
 #define GPSTX         15
 #define NEOOUT        12
-#define GPSENABLE     11
+#define GPSENABLE     7
 #define LOGRX         6
 #define LOGTX         5
 #define SCL           21
@@ -36,8 +36,16 @@ const char *version="M0_Feather_GPS -> V0.9-20160610 ";
 Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
 Adafruit_LSM9DS0 my9DOF = Adafruit_LSM9DS0();  // i2c 9DOF sensor
 byte cksum, savecksum;
-
+volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0;
 // the setup function runs once when you press reset or power the board
+
+void pps_int()
+{
+  micro_end = micros();
+  micro_intv = micro_end - micro_beg;
+  micro_beg = micro_end;
+  icnt++;
+}
 void setup() 
 {
   Serial.begin(115200);
@@ -46,10 +54,11 @@ void setup()
   // initialize digital pin (LED) 13 as an output.
   pinMode(13, OUTPUT);
   pinMode(BATT, INPUT); // Battery level adc input
-  pinMode (GPSENABLE, OUTPUT);
-  digitalWrite(GPSENABLE, LOW); // enable the GPS
   
   // Set up the GPS
+  pinMode(GPSPPSINT, INPUT);
+  pinMode (GPSENABLE, OUTPUT);
+  digitalWrite(GPSENABLE, LOW); // enable the GPS
   Serial1.begin(GPS_BAUD);
   myGPS.begin(GPS_BAUD);
 
@@ -70,11 +79,15 @@ void setup()
   // 3.) Setup the gyroscope
   my9DOF.setupGyro(my9DOF.LSM9DS0_GYROSCALE_245DPS);
 */
+
+  // set up the GPS PPS interupt driver
+  attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, RISING);
 }
 
 // the loop function runs over and over again forever
 void loop() 
 {
+  interrupts(); // Make sure interrupts are on
   // Serial.println(analogRead(BATT));
   digitalWrite(13, HIGH);   // turn the LED on (HIGH is the voltage level)
   delay(0);              // wait for a second
@@ -111,15 +124,6 @@ void loop()
       {
         myGPS.parse(myGPS.lastNMEA());
 #ifdef DEBUG
-        Serial.print("\nTime: ");
-        Serial.print(myGPS.hour, DEC); Serial.print(':');
-        Serial.print(myGPS.minute, DEC); Serial.print(':');
-        Serial.print(myGPS.seconds, DEC); Serial.print('.');
-        Serial.print(myGPS.milliseconds);
-        Serial.print(" - Date: ");
-        Serial.print(myGPS.day, DEC); Serial.print('/');
-        Serial.print(myGPS.month, DEC); Serial.print("/20");
-        Serial.print(myGPS.year, DEC);
         Serial.print(" - Fx: "); Serial.print((int)myGPS.fix);
         Serial.print(" quality: "); Serial.println((int)myGPS.fixquality);
 #endif
@@ -127,16 +131,28 @@ void loop()
         Serial.print(sentence[4]);
         if (myGPS.fix && sentence[4] == 'R') 
         {
-          Serial.print(" Batt-> ");
+          Serial.println();
+          Serial.print(myGPS.month, DEC); Serial.print('/');
+          Serial.print(myGPS.day, DEC); Serial.print("/20");
+          Serial.print(myGPS.year, DEC);
+          Serial.print("- ");
+          Serial.print(myGPS.hour, DEC); Serial.print(':');
+          Serial.print(myGPS.minute, DEC); Serial.print(':');
+          Serial.print(myGPS.seconds, DEC); Serial.print('.');
+          Serial.print(myGPS.milliseconds); Serial.print("(");
+          Serial.print(micro_intv);
+          Serial.print(") B-> ");
           Serial.print(val, 3);
-          Serial.print(" - Loc: ");
-          Serial.print(myGPS.latitude, 4); Serial.print(myGPS.lat);
+          Serial.print("V -> ");
+          Serial.print(myGPS.latitude, 4); Serial.print("-"); Serial.print(myGPS.lat);
           Serial.print(", ");
-          Serial.print(myGPS.longitude, 4); Serial.print(myGPS.lon);
-          Serial.print(" - Sp (kt): "); Serial.print(myGPS.speed);
-          Serial.print(" - Angle: "); Serial.print(myGPS.angle);
-          Serial.print(" - Alt: "); Serial.print(myGPS.altitude);
-          Serial.print(" - Sats: "); Serial.println((int)myGPS.satellites);
+          Serial.print(myGPS.longitude, 4); Serial.print("-"); Serial.print(myGPS.lon);
+          Serial.print(" "); Serial.print(myGPS.speed);
+          Serial.print("Kt "); Serial.print(myGPS.altitude);
+          Serial.print("M S- "); Serial.println((int)myGPS.satellites);
+
+          Serial.print(micro_intv); Serial.print(" ");
+          Serial.println(icnt);
         }
       }
       
