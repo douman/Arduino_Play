@@ -1,0 +1,9 @@
+name=drmLib
+version=1.0.0
+author=drm
+maintainer=drm
+sentence=Doug's utility library.
+paragraph=General support/utility routines for Arduino programming
+category=Other
+url=https://github.com/douman/Arduino_Play
+architectures=*
