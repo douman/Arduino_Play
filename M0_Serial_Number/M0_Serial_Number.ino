@@ -10,9 +10,7 @@ const char *version="M0_Feather_GPS -> V0.9-20160610 ";
 // #include <Adafruit_BluefruitLE_SPI.h>
 // #include <SPI.h>
 
-/* Utilitize the GPS with M0 Feather BLE
- *  with liberal code borrowing from Adafruit
- *  
+/*  Read the Atmel SAMD21G18 Serial number registers and print them\
  *  V0.9 by drm 20160609
  */
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
@@ -51,7 +49,7 @@ void setup()
   Serial.begin(115200);
   drmStartPrint(version);
    
-  // initialize digital pin (LED) 13 as an output.
+  // initialize digital pin (LED) 13 as an output and the battery level as analog input
   pinMode(13, OUTPUT);
   pinMode(BATT, INPUT); // Battery level adc input
   
@@ -61,41 +59,12 @@ void setup()
   digitalWrite(GPSENABLE, LOW); // enable the GPS
   Serial1.begin(GPS_BAUD);
   myGPS.begin(GPS_BAUD);
-
-  // Set up the 9DOF shield
-  // my9DOF.begin();
-/*    if(!my9DOF.begin())
-  {
-    // There was a problem detecting the LSM9DS0 ... check your connections
-    Serial.print(F("Ooops, no LSM9DS0 detected ... Check your wiring - looping!"));
-    while(1);
-  }
-
-
-  // 1.) Set the accelerometer range
-  my9DOF.setupAccel(my9DOF.LSM9DS0_ACCELRANGE_2G);  
-  // 2.) Set the magnetometer sensitivity
-  my9DOF.setupMag(my9DOF.LSM9DS0_MAGGAIN_2GAUSS);
-  // 3.) Setup the gyroscope
-  my9DOF.setupGyro(my9DOF.LSM9DS0_GYROSCALE_245DPS);
-*/
-
-  // set up the GPS PPS interupt driver
-  attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, RISING);
 }
 
 // the loop function runs over and over again forever
 void loop() 
 {
-  interrupts(); // Make sure interrupts are on
-  // Serial.println(analogRead(BATT));
-  digitalWrite(13, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(0);              // wait for a second
-  digitalWrite(13, LOW);    // turn the LED off by making the voltage LOW
-  delay(0);              // wait for a second
-  // Serial.println("Reg Serial.println");
-  // SerialUSB.println("USB Serial.println");
-
+  // send any serial input straight to the GPS unit
   if (Serial.available()) 
   {
     char c = Serial.read();
@@ -105,7 +74,7 @@ void loop()
   {
     char c = myGPS.read();
     
-    if (c=='$')
+    if (c=='$') // Beginning of a GPS sentence
     {
       // Get and print Battery voltage at beginning of GPS sentence
       float val=0;
@@ -116,7 +85,6 @@ void loop()
 #ifdef DEBUG
       Serial.print("Chsum-> ");
       Serial.print(savecksum, HEX);
-
 #endif
 
       // Print the parsed values
@@ -128,8 +96,8 @@ void loop()
         Serial.print(" quality: "); Serial.println((int)myGPS.fixquality);
 #endif
         char *sentence = myGPS.lastNMEA();
-        Serial.print(sentence[4]);
-        if (myGPS.fix && sentence[4] == 'R') 
+        Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
+        if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
         {
           if(millis() < 10000) drmStartPrint(version);
           Serial.println();
@@ -154,6 +122,7 @@ void loop()
 
           Serial.print(micro_intv); Serial.print(" ");
           Serial.println(icnt);
+          print_serial();
         }
       }
       
@@ -171,3 +140,15 @@ void loop()
     // Serial.write(c);
   }
 }
+void print_serial()
+{
+  long s[4], *ser;
+  ser = (long *) 0x0080A00C;
+  int i;
+  for (i=3; i>=0; i--) s[i] = *ser++;
+
+  Serial.print("Serial-> ");
+  for(i=0; i<4; i++) Serial.print(s[i], HEX);
+  Serial.println();
+}
+
