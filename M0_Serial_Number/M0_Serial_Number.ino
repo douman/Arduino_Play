@@ -99,7 +99,13 @@ void loop()
         Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
         if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
         {
-          if(millis() < 10000) drmStartPrint(version);
+          if(millis() < 10000) 
+          {
+            drmStartPrint(version);
+            Serial.print(micro_intv); Serial.print(" ");
+            Serial.println(icnt);
+            print_serial();
+          }
           Serial.println();
           drmPrtLead0(myGPS.month, 2); Serial.print('/');
           drmPrtLead0(myGPS.day, 2);; Serial.print("/20");
@@ -119,10 +125,6 @@ void loop()
           Serial.print(" "); Serial.print(myGPS.speed);
           Serial.print("Kt "); Serial.print(myGPS.altitude);
           Serial.print("M S- "); Serial.println((int)myGPS.satellites);
-
-          Serial.print(micro_intv); Serial.print(" ");
-          Serial.println(icnt);
-          print_serial();
         }
       }
       
