@@ -1,17 +1,20 @@
-#include <Adafruit_Sensor.h>
+  #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM9DS0.h>
 #include <drmLib.h>
 #include <Adafruit_GPS.h>
 #include <Arduino.h>
 #include <SPI.h>
-#include "Adafruit_BLE.h"
-#include "Adafruit_BluefruitLE_SPI.h"
+#include <Adafruit_BLE.h>
+#include <Adafruit_BluefruitLE_SPI.h>
 #include <Adafruit_BluefruitLE_UART.h>
 
 #include "BluefruitConfig.h"
 
 const char *version="M0_Feather_GPS -> V0.93-20160613 ";
 
+#define FACTORYRESET_ENABLE         1
+#define MINIMUM_FIRMWARE_VERSION    "0.6.6"
+#define MODE_LED_BEHAVIOUR          "MODE"
 
 /* Utilitize the GPS with M0 Feather BLE
  *  with liberal code borrowing from Adafruit
@@ -41,9 +44,11 @@ const char *version="M0_Feather_GPS -> V0.93-20160613 ";
 
 Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
 Adafruit_LSM9DS0 my9DOF = Adafruit_LSM9DS0();  // i2c 9DOF sensor
+Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST); // Bluetooth LE
+
 byte cksum, savecksum;
 volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0;
-double micro_factor=1.00052;
+float micro_factor=1.000, micro_corr = 0;
 volatile boolean new_sec = false;
 // the setup function runs once when you press reset or power the board
 
@@ -55,6 +60,12 @@ void pps_int()
   new_sec = true;
   icnt++;
 }
+
+// A small helper -- ADAFRUIT
+void error(const __FlashStringHelper*err) {
+  Serial.println(err);
+  while (1);
+}
 void setup() 
 {
   Serial.begin(115200);
@@ -64,6 +75,28 @@ void setup()
   pinMode(LED, OUTPUT); digitalWrite(LED, LOW);
   pinMode(BATT, INPUT); // Battery level adc input
   
+  // Set up the Bluetooth LE
+  if ( !ble.begin(VERBOSE_MODE) )
+  {
+    error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
+  }
+  Serial.println( F("BLE OK!"));
+    if ( FACTORYRESET_ENABLE )
+  {
+    /* Perform a factory reset to make sure everything is in a known state */
+    Serial.println(F("Performing a factory reset: "));
+    if ( ! ble.factoryReset() )
+    {
+      error(F("Couldn't factory reset"));
+    }
+  }
+  ble.verbose(false);  // debug info is a little annoying after this point!
+  /* Disable command echo from Bluefruit */
+  ble.echo(false);
+  // Set module to DATA mode
+  ble.setMode(BLUEFRUIT_MODE_DATA);
+
+
   // Set up the GPS
   pinMode(GPSPPSINT, INPUT);
   pinMode (GPSENABLE, OUTPUT);
@@ -106,8 +139,10 @@ void loop()
   }
   if(new_sec && icnt > 10)
   {
+    long delta = 1000000 - micro_intv;
+    if(icnt == 11) micro_corr = delta;
+    micro_corr = (99 * micro_corr + delta)/100.0;
     new_sec = false;
-    micro_factor = (19 * micro_factor + 1.0e6/(micro_factor * ((double) micro_intv)) + 5.45e-4)/20.0;
   }
   if (Serial1.available()) 
   {
@@ -116,10 +151,10 @@ void loop()
     if (c=='$')
     {
       // Get and print Battery voltage at beginning of GPS sentence
-      double val=0;
+      float val=0;
       int i;
       for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(BATT);
-      val = val/(double)BAT_AVG_CNT;
+      val = val/(float)BAT_AVG_CNT;
       val = (val * (2*3.3))/1024;
 #ifdef DEBUG
       Serial.print("Chsum-> ");
@@ -159,18 +194,28 @@ void loop()
           Serial.print(") B-> ");
           Serial.print(val, 3);
           Serial.print("V -> ");
-          Serial.print(myGPS.latitude, 4); Serial.print("-"); Serial.print(myGPS.lat);
+          int temp = (int) myGPS.latitude/100;
+          Serial.print(temp); Serial.print(" ");
+          Serial.print(myGPS.latitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lat);
           Serial.print(", ");
-          Serial.print(myGPS.longitude, 4); Serial.print("-"); Serial.print(myGPS.lon);
+          temp = (int) myGPS.longitude/100;
+          Serial.print(temp); Serial.print(" ");
+          Serial.print(myGPS.longitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lon);
           Serial.print(" "); Serial.print(myGPS.speed);
           Serial.print("Kt "); Serial.print(myGPS.altitude);
           Serial.print("M S- "); Serial.println((int)myGPS.satellites);
 
           Serial.print(micro_intv); Serial.print(" ");
-          Serial.print(((double)micro_intv) * micro_factor,1); Serial.print(" ");
-          Serial.print(micro_factor, 7); Serial.print(" ");
+          Serial.print(((float)micro_intv) + micro_corr,1); Serial.print(" ");
+          Serial.print(micro_corr, 2); Serial.print(" ");
           Serial.println(icnt);
           digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
+
+          if(ble.isConnected())
+          {
+                ble.println(val,3);
+                Serial.println("finished ble write");
+          }
         }
       }
       

@@ -82,7 +82,7 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 
 #define BATT          A7
 #define BAT_AVG_CNT   4
-unsigned long last_millis=0;
+unsigned long last_millis=0, valprt_cnt=0;
 
 
 // A small helper
@@ -169,7 +169,7 @@ void setup(void)
 void loop(void)
 {
   // Output Voltage level every 5 secs to BLE
-  if(millis() - last_millis > 5000)
+  if(millis() - last_millis > 100)
   {
     // Get and print Battery voltage at beginning of GPS sentence
     double val=0;
@@ -177,7 +177,8 @@ void loop(void)
     for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(BATT);
     val = val/(double)BAT_AVG_CNT;
     val = (val * (2*3.3))/1024;
-    ble.println(val,3);
+    ble.print(val,3); ble.print(", ");
+    if(++valprt_cnt % 6 ==0) ble.println();
     last_millis = millis();    
   }
   
