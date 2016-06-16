@@ -1,4 +1,4 @@
-  #include <Adafruit_Sensor.h>
+#include <Adafruit_Sensor.h>
 #include <Adafruit_LSM9DS0.h>
 #include <drmLib.h>
 #include <Adafruit_GPS.h>
@@ -22,6 +22,7 @@ const char *version="M0_Feather_GPS -> V0.93-20160613 ";
  *  V0.9 by drm 20160609
  *  V0.91 by drm 20160613 added time adjustment
  *  V0.92 by drm 20160613 got the factors for micro timing dialed in (I think)
+ *  V0.93 by drm 20160616 more work on timing corrections
  */
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
 #define BAT_AVG_CNT 4
@@ -137,11 +138,12 @@ void loop()
     char c = Serial.read();
     Serial1.write(c);
   }
-  if(new_sec && icnt > 10)
+  // Recalculate the 1sec microsecond correction (only for rational values of measured microseconds)
+  if(new_sec && icnt > 10 && micro_intv > 999000 && micro_intv < 1001000)
   {
     long delta = 1000000 - micro_intv;
     if(icnt == 11) micro_corr = delta;
-    micro_corr = (99 * micro_corr + delta)/100.0;
+    micro_corr = (4.0 * micro_corr + ((float) delta))/5.0;
     new_sec = false;
   }
   if (Serial1.available()) 
