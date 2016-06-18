@@ -23,6 +23,7 @@ const char *version="M0_Feather_GPS -> V0.93-20160613 ";
  *  V0.91 by drm 20160613 added time adjustment
  *  V0.92 by drm 20160613 got the factors for micro timing dialed in (I think)
  *  V0.93 by drm 20160616 more work on timing corrections
+ *  V0.94 by drm 20160617 now using all 12 bits of ADC
  */
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
 #define BAT_AVG_CNT 4
@@ -75,6 +76,7 @@ void setup()
   // initialize digital pin (LED) 13 as an output and the battery level as analog input
   pinMode(LED, OUTPUT); digitalWrite(LED, LOW);
   pinMode(BATT, INPUT); // Battery level adc input
+  analogReadResolution(12);
   
   // Set up the Bluetooth LE
   if ( !ble.begin(VERBOSE_MODE) )
@@ -124,7 +126,7 @@ void setup()
 */
 
   // set up the GPS PPS interupt driver
-  attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, FALLING);
+  attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, RISING);
 }
 
 // the loop function runs over and over again forever
@@ -157,7 +159,8 @@ void loop()
       int i;
       for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(BATT);
       val = val/(float)BAT_AVG_CNT;
-      val = (val * (2*3.3))/1024;
+      // val = (val * (2*3.3))/1024;
+      val = (val * (2*3.3))/4096;
 #ifdef DEBUG
       Serial.print("Chsum-> ");
       Serial.print(savecksum, HEX);
@@ -187,15 +190,15 @@ void loop()
           drmPrtLead0(myGPS.month, 2); Serial.print('/');
           drmPrtLead0(myGPS.day, 2);; Serial.print("/20");
           drmPrtLead0(myGPS.year, 2);
-          Serial.print("- ");
+          Serial.print(" ");
           drmPrtLead0(myGPS.hour, 2); Serial.print(':');
           drmPrtLead0(myGPS.minute, 2); Serial.print(':');
           drmPrtLead0(myGPS.seconds, 2); Serial.print('.');
-          drmPrtLead0(myGPS.milliseconds, 2); Serial.print("(");
+          drmPrtLead0(myGPS.milliseconds, 2); Serial.print(" ");
           Serial.print(micro_intv);
-          Serial.print(") B-> ");
+          Serial.print("  ");
           Serial.print(val, 3);
-          Serial.print("V -> ");
+          Serial.print(" V ");
           int temp = (int) myGPS.latitude/100;
           Serial.print(temp); Serial.print(" ");
           Serial.print(myGPS.latitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lat);
@@ -204,8 +207,8 @@ void loop()
           Serial.print(temp); Serial.print(" ");
           Serial.print(myGPS.longitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lon);
           Serial.print(" "); Serial.print(myGPS.speed);
-          Serial.print("Kt "); Serial.print(myGPS.altitude);
-          Serial.print("M S- "); Serial.println((int)myGPS.satellites);
+          Serial.print(" Kt "); Serial.print(myGPS.altitude);
+          Serial.print(" M #S "); Serial.println((int)myGPS.satellites);
 
           Serial.print(micro_intv); Serial.print(" ");
           Serial.print(((float)micro_intv) + micro_corr,1); Serial.print(" ");

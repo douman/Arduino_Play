@@ -42,6 +42,8 @@
 enum rtc_type 
 {
 	DS3231,
+	GPSFEATHER,
+	GPSGARMIN,
 	OTHER
 }
 /* Can't do the struct thing in Arduino for some reason
