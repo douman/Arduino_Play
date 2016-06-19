@@ -159,6 +159,7 @@ void setup(void)
   ble.setMode(BLUEFRUIT_MODE_DATA);
 
   Serial.println(F("******************************"));
+  analogReadResolution(12);
 }
 
 /**************************************************************************/
@@ -176,7 +177,7 @@ void loop(void)
     int i;
     for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(BATT);
     val = val/(double)BAT_AVG_CNT;
-    val = (val * (2*3.3))/1024;
+    val = (val * (2*3.3))/4096;
     ble.print(val,3); ble.print(", ");
     if(++valprt_cnt % 6 ==0) ble.println();
     last_millis = millis();    
