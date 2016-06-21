@@ -27,6 +27,7 @@ const char *version="M0_Feather_GPS -> V0.93-20160613 ";
  */
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
 #define BAT_AVG_CNT 4
+#define BLEMOD 30
 // #define DEBUG
 
 // Define pins for M0 Feather BLE DiverLogger
@@ -64,10 +65,12 @@ void pps_int()
 }
 
 // A small helper -- ADAFRUIT
-void error(const __FlashStringHelper*err) {
+void error(const __FlashStringHelper*err)
+{
   Serial.println(err);
   while (1);
 }
+
 void setup() 
 {
   Serial.begin(115200);
@@ -98,7 +101,6 @@ void setup()
   ble.echo(false);
   // Set module to DATA mode
   ble.setMode(BLUEFRUIT_MODE_DATA);
-
 
   // Set up the GPS
   pinMode(GPSPPSINT, INPUT);
@@ -132,6 +134,7 @@ void setup()
 // the loop function runs over and over again forever
 void loop() 
 {
+  boolean bleprt = false;
   interrupts(); // Make sure interrupts are on
 
   // send any serial input straight to the GPS unit
@@ -145,7 +148,7 @@ void loop()
   {
     long delta = 1000000 - micro_intv;
     if(icnt == 11) micro_corr = delta;
-    micro_corr = (4.0 * micro_corr + ((float) delta))/5.0;
+    micro_corr = (7.0 * micro_corr + ((float) delta))/8.0;
     new_sec = false;
   }
   if (Serial1.available()) 
@@ -203,6 +206,14 @@ void loop()
           Serial.print(temp); Serial.print(" ");
           Serial.print(myGPS.latitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lat);
           Serial.print(", ");
+          //if(bleprt || (icnt % BLEMOD == 0 && icnt > 10))
+          if(false)
+          {
+            bleprt=true;
+            ble.print(temp); ble.print(" ");
+            ble.print(myGPS.latitude - 100 * temp, 4); ble.print(" "); ble.print(myGPS.lat);
+          }
+          
           temp = (int) myGPS.longitude/100;
           Serial.print(temp); Serial.print(" ");
           Serial.print(myGPS.longitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lon);
@@ -210,17 +221,23 @@ void loop()
           Serial.print(" Kt "); Serial.print(myGPS.altitude);
           Serial.print(" M #S "); Serial.println((int)myGPS.satellites);
 
+          //if(bleprt)
+          if(false)
+          {
+            ble.print(temp); ble.print(" ");
+            ble.print(myGPS.longitude - 100 * temp, 4); ble.print(" "); ble.print(myGPS.lon);
+            ble.print(" "); ble.print(myGPS.speed);
+            ble.print(" Kt "); ble.print(myGPS.altitude);
+            ble.print(" M #S "); ble.print((int)myGPS.satellites);
+            ble.println();
+          }
+
           Serial.print(micro_intv); Serial.print(" ");
           Serial.print(((float)micro_intv) + micro_corr,1); Serial.print(" ");
           Serial.print(micro_corr, 2); Serial.print(" ");
           Serial.println(icnt);
           digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
-
-          if(ble.isConnected())
-          {
-                ble.println(val,3);
-                Serial.println("finished ble write");
-          }
+          bleprt=false;
         }
       }
       
