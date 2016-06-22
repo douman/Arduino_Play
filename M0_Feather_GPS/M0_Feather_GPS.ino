@@ -24,10 +24,13 @@ const char *version="M0_Feather_GPS -> V0.93-20160613 ";
  *  V0.92 by drm 20160613 got the factors for micro timing dialed in (I think)
  *  V0.93 by drm 20160616 more work on timing corrections
  *  V0.94 by drm 20160617 now using all 12 bits of ADC
+ *  V1.0 by drm 20160621 cleaning up the string output and getting BLE working
+ *  V1.1 by drm 20160622 serial toggles for various output (serial/BLE)
  */
+#define OUT_SIZE 120
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
 #define BAT_AVG_CNT 4
-#define BLEMOD 30
+#define BLEMOD 10
 // #define DEBUG
 
 // Define pins for M0 Feather BLE DiverLogger
@@ -52,6 +55,7 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 byte cksum, savecksum;
 volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0;
 float micro_factor=1.000, micro_corr = 0;
+boolean bleprt = false, serprt=true, wrt_ble = false;
 volatile boolean new_sec = false;
 // the setup function runs once when you press reset or power the board
 
@@ -67,7 +71,7 @@ void pps_int()
 // A small helper -- ADAFRUIT
 void error(const __FlashStringHelper*err)
 {
-  Serial.println(err);
+  if(serprt) Serial.println(err);
   while (1);
 }
 
@@ -134,15 +138,28 @@ void setup()
 // the loop function runs over and over again forever
 void loop() 
 {
-  boolean bleprt = false;
+  String out = String(OUT_SIZE);
+  int out_off=0;
   interrupts(); // Make sure interrupts are on
 
   // send any serial input straight to the GPS unit
   if (Serial.available()) 
   {
     char c = Serial.read();
+    if(c == 'B' || c == 'b') { bleprt = wrt_ble = !wrt_ble; Serial.print("BLE swap "); if(wrt_ble) Serial.print(" TRUE "); Serial.println(wrt_ble); }
+    if(c == 'S' || c == 's') { serprt = !serprt; Serial.print("SER swap "); if(serprt) Serial.print(" TRUE "); Serial.println(serprt); }
     Serial1.write(c);
   }
+/*  
+  if (ble.available()) 
+  {
+    char c = ble.read();
+    if(c == 'B' || c == 'b') { wrt_ble = !wrt_ble; Serial.print("BLE swap "); if(wrt_ble) Serial.print(" TRUE "); Serial.println(wrt_ble); }
+    if(c == 'S' || c == 's') { serprt = !serprt; Serial.print("SER swap "); if(serprt) Serial.print(" TRUE "); Serial.println(serprt); }
+    Serial1.write(c);
+  }
+ *   
+ */
   // Recalculate the 1sec microsecond correction (only for rational values of measured microseconds)
   if(new_sec && icnt > 10 && micro_intv > 999000 && micro_intv < 1001000)
   {
@@ -165,77 +182,71 @@ void loop()
       // val = (val * (2*3.3))/1024;
       val = (val * (2*3.3))/4096;
 #ifdef DEBUG
-      Serial.print("Chsum-> ");
-      Serial.print(savecksum, HEX);
+      if(serprt) Serial.println(myGPS.newNMEAreceived());
+      if(serprt) Serial.print("Chsum-> ");
+      if(serprt) Serial.println(savecksum, HEX);
+      if(serprt) Serial.print(" - Fx: "); if(serprt) Serial.print((int)myGPS.fix);
+      if(serprt) Serial.print(" quality: "); if(serprt) Serial.println((int)myGPS.fixquality);
 #endif
 
       // Print the parsed values
       if (myGPS.newNMEAreceived()) 
       {
         myGPS.parse(myGPS.lastNMEA());
-#ifdef DEBUG
-        Serial.print(" - Fx: "); Serial.print((int)myGPS.fix);
-        Serial.print(" quality: "); Serial.println((int)myGPS.fixquality);
-#endif
         char *sentence = myGPS.lastNMEA();
-        Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
+        if(serprt) Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
         if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
         {
           digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
           if(millis() < 10000) 
           {
             drmStartPrint(version);
-            Serial.print(micro_intv); Serial.print(" ");
-            Serial.println(icnt);
+            if(serprt) Serial.print(micro_intv); if(serprt) Serial.print(" ");
+            if(serprt) Serial.println(icnt);
             print_serial();
           }
-          Serial.println();
-          drmPrtLead0(myGPS.month, 2); Serial.print('/');
-          drmPrtLead0(myGPS.day, 2);; Serial.print("/20");
-          drmPrtLead0(myGPS.year, 2);
-          Serial.print(" ");
-          drmPrtLead0(myGPS.hour, 2); Serial.print(':');
-          drmPrtLead0(myGPS.minute, 2); Serial.print(':');
-          drmPrtLead0(myGPS.seconds, 2); Serial.print('.');
-          drmPrtLead0(myGPS.milliseconds, 2); Serial.print(" ");
-          Serial.print(micro_intv);
-          Serial.print("  ");
-          Serial.print(val, 3);
-          Serial.print(" V ");
-          int temp = (int) myGPS.latitude/100;
-          Serial.print(temp); Serial.print(" ");
-          Serial.print(myGPS.latitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lat);
-          Serial.print(", ");
-          //if(bleprt || (icnt % BLEMOD == 0 && icnt > 10))
-          if(false)
+          if(serprt) Serial.println();
+          out = String(myGPS.month) + "/";
+          out = out + String(myGPS.day) + "/20";
+          out = out + String(myGPS.year) + " ";
+
+          out = out + String(myGPS.hour) + ":";
+          out = out + String(myGPS.minute) + ":";
+          out = out + String(myGPS.seconds) + ".";
+          out = out + String(myGPS.milliseconds) + " ";
+          out = out + String(val) + " V ";
+          out = out + String((int) myGPS.latitude/100) + " " + 
+              String(myGPS.latitude - 100 * ((int) myGPS.latitude/100), 4) + "." +
+              String(myGPS.lat) + "  N ";
+          out = out + String((int) myGPS.longitude/100) + " " +
+              String(myGPS.longitude - 100 * ((int) myGPS.longitude/100), 4) + "." +
+              String(myGPS.lon) + "  W ";
+          out = out + String(myGPS.speed, 2) + " kt ";
+          out = out + String(myGPS.altitude, 2) + " m n-> ";
+          out = out + String(myGPS.satellites);
+          if(serprt)
+          {
+            if(serprt) Serial.println(out);
+          }
+          if(wrt_ble && (bleprt || (icnt % BLEMOD == 0 && icnt > 10)))
           {
             bleprt=true;
-            ble.print(temp); ble.print(" ");
-            ble.print(myGPS.latitude - 100 * temp, 4); ble.print(" "); ble.print(myGPS.lat);
+            ble.println(out);
+          }
+
+          out = String(micro_intv) + " ";
+          out = out + String(((float)micro_intv) + micro_corr, 1) + " ";
+          out = out + String(micro_corr, 2) + " ";
+          out = out + String(icnt);
+          if(serprt)
+          {
+            if(serprt) Serial.println(out);
+          }
+          if(bleprt)
+          {
+            ble.println(out);
           }
           
-          temp = (int) myGPS.longitude/100;
-          Serial.print(temp); Serial.print(" ");
-          Serial.print(myGPS.longitude - 100 * temp, 4); Serial.print(" "); Serial.print(myGPS.lon);
-          Serial.print(" "); Serial.print(myGPS.speed);
-          Serial.print(" Kt "); Serial.print(myGPS.altitude);
-          Serial.print(" M #S "); Serial.println((int)myGPS.satellites);
-
-          //if(bleprt)
-          if(false)
-          {
-            ble.print(temp); ble.print(" ");
-            ble.print(myGPS.longitude - 100 * temp, 4); ble.print(" "); ble.print(myGPS.lon);
-            ble.print(" "); ble.print(myGPS.speed);
-            ble.print(" Kt "); ble.print(myGPS.altitude);
-            ble.print(" M #S "); ble.print((int)myGPS.satellites);
-            ble.println();
-          }
-
-          Serial.print(micro_intv); Serial.print(" ");
-          Serial.print(((float)micro_intv) + micro_corr,1); Serial.print(" ");
-          Serial.print(micro_corr, 2); Serial.print(" ");
-          Serial.println(icnt);
           digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
           bleprt=false;
         }
@@ -262,7 +273,7 @@ void print_serial()
   int i;
   for (i=3; i>=0; i--) s[i] = *ser++;
 
-  Serial.print("Serial-> ");
-  for(i=0; i<4; i++) Serial.print(s[i], HEX);
-  Serial.println();
+  if(serprt) Serial.print("s ");
+  for(i=0; i<4; i++) if(serprt) Serial.print(s[i], HEX);
+  if(serprt) Serial.println();
 }
