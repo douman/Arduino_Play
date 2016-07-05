@@ -10,7 +10,7 @@
 
 #include "BluefruitConfig.h"
 
-const char *version="M0_Feather_GPS -> V0.93-20160613 ";
+const char *version="M0_Feather_GPS -> V1.2-20160705 ";
 
 #define FACTORYRESET_ENABLE         1
 #define MINIMUM_FIRMWARE_VERSION    "0.6.6"
@@ -26,11 +26,12 @@ const char *version="M0_Feather_GPS -> V0.93-20160613 ";
  *  V0.94 by drm 20160617 now using all 12 bits of ADC
  *  V1.0 by drm 20160621 cleaning up the string output and getting BLE working
  *  V1.1 by drm 20160622 serial toggles for various output (serial/BLE)
+ *  V1.2 by drm 20160705 messing with output formats and sprintf for leading zeros
  */
-#define OUT_SIZE 120
+#define OUT_SIZE 160
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
 #define BAT_AVG_CNT 4
-#define BLEMOD 10
+#define BLEMOD 20
 // #define DEBUG
 
 // Define pins for M0 Feather BLE DiverLogger
@@ -55,7 +56,7 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 byte cksum, savecksum;
 volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0;
 float micro_factor=1.000, micro_corr = 0;
-boolean bleprt = false, serprt=true, wrt_ble = false;
+boolean bleprt = false, serprt=true, wrt_ble = true;
 volatile boolean new_sec = false;
 // the setup function runs once when you press reset or power the board
 
@@ -206,21 +207,34 @@ void loop()
             print_serial();
           }
           if(serprt) Serial.println();
-          out = String(myGPS.month) + "/";
-          out = out + String(myGPS.day) + "/20";
-          out = out + String(myGPS.year) + " ";
 
-          out = out + String(myGPS.hour) + ":";
-          out = out + String(myGPS.minute) + ":";
-          out = out + String(myGPS.seconds) + ".";
-          out = out + String(myGPS.milliseconds) + " ";
+          char stemp[10];
+          sprintf(stemp, "%02d", myGPS.month);
+          out = String(stemp) + "/";
+          sprintf(stemp, "%02d", myGPS.day);
+          out = out + String(stemp) + "/20";
+          sprintf(stemp, "%02d", myGPS.year);
+          out = out + String(stemp) + " ";
+
+          sprintf(stemp, "%02d", myGPS.hour);
+          out = out + String(stemp) + ":";
+          sprintf(stemp, "%02d", myGPS.minute);
+          out = out + String(stemp) + ":";
+          sprintf(stemp, "%02d", myGPS.seconds);
+          out = out + String(stemp) + ".";
+          sprintf(stemp, "%03d", myGPS.milliseconds);
+          out = out + String(stemp) + " ";
+
           out = out + String(val) + " V ";
-          out = out + String((int) myGPS.latitude/100) + " " + 
-              String(myGPS.latitude - 100 * ((int) myGPS.latitude/100), 4) + "." +
-              String(myGPS.lat) + "  N ";
-          out = out + String((int) myGPS.longitude/100) + " " +
-              String(myGPS.longitude - 100 * ((int) myGPS.longitude/100), 4) + "." +
-              String(myGPS.lon) + "  W ";
+
+          out = out + String("\r\n");
+          
+          out = out + String((int) myGPS.latitude/100) + ":" + 
+              String(myGPS.latitude - 100 * ((int) myGPS.latitude/100), 4) +
+              " N ";
+          out = out + String((int) myGPS.longitude/100) + ":" +
+              String(myGPS.longitude - 100 * ((int) myGPS.longitude/100), 4) +
+              " W ";
           out = out + String(myGPS.speed, 2) + " kt ";
           out = out + String(myGPS.altitude, 2) + " m n-> ";
           out = out + String(myGPS.satellites);
