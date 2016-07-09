@@ -9,8 +9,9 @@
 #include <Adafruit_BluefruitLE_UART.h>
 
 #include "BluefruitConfig.h"
+#include "M0_Feather_GPS.h"
 
-const char *version="M0_Feather_GPS -> V1.2-20160705 ";
+const char *version="M0_Feather_GPS -> V1.3-20160706 ";
 
 #define FACTORYRESET_ENABLE         1
 #define MINIMUM_FIRMWARE_VERSION    "0.6.6"
@@ -27,39 +28,14 @@ const char *version="M0_Feather_GPS -> V1.2-20160705 ";
  *  V1.0 by drm 20160621 cleaning up the string output and getting BLE working
  *  V1.1 by drm 20160622 serial toggles for various output (serial/BLE)
  *  V1.2 by drm 20160705 messing with output formats and sprintf for leading zeros
+ *  V1.3 by drm 20160706 adjusting messages to sw design document
  */
-#define OUT_SIZE 160
-#define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
-#define BAT_AVG_CNT 4
-#define BLEMOD 20
-// #define DEBUG
-
-// Define pins for M0 Feather BLE DiverLogger
-#define LED           13
-#define BATT          A7
-#define GPSPPSINT     11
-#define ACCINT        8
-#define MICIN         A10
-#define GPSRX         16
-#define GPSTX         15
-#define NEOOUT        12
-#define GPSENABLE     7
-#define LOGRX         6
-#define LOGTX         5
-#define SCL           21
-#define SDA           20
 
 Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
 Adafruit_LSM9DS0 my9DOF = Adafruit_LSM9DS0();  // i2c 9DOF sensor
 Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST); // Bluetooth LE
 
-byte cksum, savecksum;
-volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0;
-float micro_factor=1.000, micro_corr = 0;
-boolean bleprt = false, serprt=true, wrt_ble = true;
-volatile boolean new_sec = false;
 // the setup function runs once when you press reset or power the board
-
 void pps_int()
 {
   micro_end = micros();
@@ -208,13 +184,13 @@ void loop()
           }
           if(serprt) Serial.println();
 
-          char stemp[10];
+          char stemp[20];
           sprintf(stemp, "%02d", myGPS.month);
-          out = String(stemp) + "/";
+          out = String(log_cnt++) + "\trtc\t" + String(stemp) + "/";
           sprintf(stemp, "%02d", myGPS.day);
           out = out + String(stemp) + "/20";
           sprintf(stemp, "%02d", myGPS.year);
-          out = out + String(stemp) + " ";
+          out = out + String(stemp) + "\t";
 
           sprintf(stemp, "%02d", myGPS.hour);
           out = out + String(stemp) + ":";
@@ -222,21 +198,34 @@ void loop()
           out = out + String(stemp) + ":";
           sprintf(stemp, "%02d", myGPS.seconds);
           out = out + String(stemp) + ".";
-          sprintf(stemp, "%03d", myGPS.milliseconds);
-          out = out + String(stemp) + " ";
+          sprintf(stemp, "%03d", myGPS.milliseconds) + "\t";
+          out = out + String(stemp) + "\t";
 
-          out = out + String(val) + " V ";
+          out = out + String(val) + " V";
+          out = out + "\r\n" + String(log_cnt++) + "\tgps\t";
 
-          out = out + String("\r\n");
-          
-          out = out + String((int) myGPS.latitude/100) + ":" + 
-              String(myGPS.latitude - 100 * ((int) myGPS.latitude/100), 4) +
-              " N ";
-          out = out + String((int) myGPS.longitude/100) + ":" +
-              String(myGPS.longitude - 100 * ((int) myGPS.longitude/100), 4) +
-              " W ";
-          out = out + String(myGPS.speed, 2) + " kt ";
-          out = out + String(myGPS.altitude, 2) + " m n-> ";
+          float fmin;
+          long deg, imin, ifmin;
+          char simin[4], sifmin[4];
+          deg = (int) (myGPS.latitude/100);
+          imin = (int) (myGPS.latitude - 100 * ((int) myGPS.latitude/100));
+          sprintf(simin, "%02d", imin);
+          fmin = myGPS.latitude - 100 * ((int) myGPS.latitude/100);
+          ifmin = (int) 1000 * (fmin - (float) imin);
+          sprintf(sifmin, "%03d", ifmin);
+          out = out + String(deg) + ":" + simin + "." + sifmin + " " + myGPS.lat + "\t";
+
+          deg = (int) (myGPS.longitude/100);
+          imin = (int) (myGPS.longitude - 100 * ((int) myGPS.longitude/100));
+          sprintf(simin, "%02d", imin);
+          fmin = myGPS.longitude - 100 * ((int) myGPS.longitude/100);
+          ifmin = (int) 1000 * (fmin - (float) imin);
+          sprintf(sifmin, "%03d", ifmin);
+          out = out + String(deg) + ":" + simin + "." + sifmin + " " + myGPS.lon;
+
+          out = out + "\r\n"+ String(log_cnt++) + "\tmisc\t";
+          out = out + String(myGPS.speed, 2) + " kt\t";
+          out = out + String(myGPS.altitude, 2) + "m\tn-> ";
           out = out + String(myGPS.satellites);
           if(serprt)
           {
@@ -248,9 +237,9 @@ void loop()
             ble.println(out);
           }
 
-          out = String(micro_intv) + " ";
-          out = out + String(((float)micro_intv) + micro_corr, 1) + " ";
-          out = out + String(micro_corr, 2) + " ";
+          out = String(log_cnt++) + "\tmisc\t" + String(micro_intv) + "\t";
+          out = out + String(((float)micro_intv) + micro_corr, 1) + "\t";
+          out = out + String(micro_corr, 2) + "\t";
           out = out + String(icnt);
           if(serprt)
           {
