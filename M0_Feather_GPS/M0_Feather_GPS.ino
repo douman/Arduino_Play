@@ -1,18 +1,7 @@
-#include <Adafruit_Sensor.h>
-#include <Adafruit_LSM9DS0.h>
-#include <drmLib.h>
-#include <Adafruit_GPS.h>
-#include <Arduino.h>
-#include <SPI.h>
-#include <Adafruit_BLE.h>
-#include <Adafruit_BluefruitLE_SPI.h>
-#include <Adafruit_BluefruitLE_UART.h>
-
-#include "BluefruitConfig.h"
 #include "M0_Feather_GPS.h"
+const char *version="M0_Feather_GPS -> V1.4-20160718 ";
 
-const char *version="M0_Feather_GPS -> V1.3-20160706 ";
-
+// These are for bluefruit
 #define FACTORYRESET_ENABLE         1
 #define MINIMUM_FIRMWARE_VERSION    "0.6.6"
 #define MODE_LED_BEHAVIOUR          "MODE"
@@ -29,6 +18,7 @@ const char *version="M0_Feather_GPS -> V1.3-20160706 ";
  *  V1.1 by drm 20160622 serial toggles for various output (serial/BLE)
  *  V1.2 by drm 20160705 messing with output formats and sprintf for leading zeros
  *  V1.3 by drm 20160706 adjusting messages to sw design document
+ *  V1.4 by drm 20160718 adding in 9 DoF sensor
  */
 
 Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
@@ -52,6 +42,19 @@ void error(const __FlashStringHelper*err)
   while (1);
 }
 
+//    Configures the gain and integration time for the TSL2561
+void configure9dof(void)
+{
+  // 1.) Set the accelerometer range
+  my9DOF.setupAccel(my9DOF.LSM9DS0_ACCELRANGE_2G);
+  
+  // 2.) Set the magnetometer sensitivity
+  my9DOF.setupMag(my9DOF.LSM9DS0_MAGGAIN_2GAUSS);
+
+  // 3.) Setup the gyroscope
+  my9DOF.setupGyro(my9DOF.LSM9DS0_GYROSCALE_245DPS);
+}
+
 void setup() 
 {
   Serial.begin(115200);
@@ -61,6 +64,16 @@ void setup()
   pinMode(LED, OUTPUT); digitalWrite(LED, LOW);
   pinMode(BATT, INPUT); // Battery level adc input
   analogReadResolution(12);
+
+  /* Initialise the 9DOF sensor */
+  if(!my9DOF.begin())
+  {
+    /* There was a problem detecting the LSM9DS0 ... check your connections */
+    Serial.print(F("Ooops, no LSM9DS0 detected ... Check your wiring or I2C ADDR!"));
+    while(1);
+  }
+  Serial.println(F("Found LSM9DS0 9DOF"));
+  configure9dof();
   
   // Set up the Bluetooth LE
   if ( !ble.begin(VERBOSE_MODE) )
@@ -90,26 +103,46 @@ void setup()
   Serial1.begin(GPS_BAUD);
   myGPS.begin(GPS_BAUD);
 
-  // Set up the 9DOF shield
-  // my9DOF.begin();
-/*    if(!my9DOF.begin())
-  {
-    // There was a problem detecting the LSM9DS0 ... check your connections
-    Serial.print(F("Ooops, no LSM9DS0 detected ... Check your wiring - looping!"));
-    while(1);
-  }
-
-
-  // 1.) Set the accelerometer range
-  my9DOF.setupAccel(my9DOF.LSM9DS0_ACCELRANGE_2G);  
-  // 2.) Set the magnetometer sensitivity
-  my9DOF.setupMag(my9DOF.LSM9DS0_MAGGAIN_2GAUSS);
-  // 3.) Setup the gyroscope
-  my9DOF.setupGyro(my9DOF.LSM9DS0_GYROSCALE_245DPS);
-*/
-
   // set up the GPS PPS interupt driver
   attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, RISING);
+}
+
+// Read the IMU sensor
+void read9dof(void)
+{
+  digitalWrite(LED, HIGH);
+  sensors_event_t accel, mag, gyro, temp;
+  my9DOF.getEvent(&accel, &mag, &gyro, &temp); 
+  digitalWrite(LED, LOW);
+
+  // Write the data
+  String out = String(OUT_SIZE);
+
+  out = String(log_cnt++) + "\tacl\t" + String(accel.acceleration.x, 2) + "\t" + 
+                                        String(accel.acceleration.y, 2) + "\t" + 
+                                        String(accel.acceleration.z, 2) + "\r\n";
+  out = out + 
+        String(log_cnt++) + "\tgyr\t" + String(gyro.gyro.x, 2) + "\t" + 
+                                        String(gyro.gyro.y, 2) + "\t" + 
+                                        String(gyro.gyro.z, 2) + "\r\n";
+  out = out + 
+        String(log_cnt++) + "\tmag\t" + String(mag.magnetic.x, 2) + "\t" + 
+                                        String(mag.magnetic.y, 2) + "\t" + 
+                                        String(mag.magnetic.z, 2) + "\r\n";
+  if(serprt) Serial.println(out);
+}
+
+// print out the SAMD processor serial number
+void print_serial()
+{
+  long s[4], *ser;
+  ser = (long *) 0x0080A00C; // address of the processor serial number
+  int i;
+  for (i=3; i>=0; i--) s[i] = *ser++;
+
+  if(serprt) Serial.print("s ");
+  for(i=0; i<4; i++) if(serprt) Serial.print(s[i], HEX);
+  if(serprt) Serial.println();
 }
 
 // the loop function runs over and over again forever
@@ -156,7 +189,7 @@ void loop()
       int i;
       for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(BATT);
       val = val/(float)BAT_AVG_CNT;
-      // val = (val * (2*3.3))/1024;
+      // val = (val * (2*3.3))/1024; // at lower ADC resolution
       val = (val * (2*3.3))/4096;
 #ifdef DEBUG
       if(serprt) Serial.println(myGPS.newNMEAreceived());
@@ -252,6 +285,7 @@ void loop()
           
           digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
           bleprt=false;
+          read9dof();
         }
       }
       
@@ -268,15 +302,4 @@ void loop()
     }
     // Serial.write(c);
   }
-}
-void print_serial()
-{
-  long s[4], *ser;
-  ser = (long *) 0x0080A00C;
-  int i;
-  for (i=3; i>=0; i--) s[i] = *ser++;
-
-  if(serprt) Serial.print("s ");
-  for(i=0; i<4; i++) if(serprt) Serial.print(s[i], HEX);
-  if(serprt) Serial.println();
 }

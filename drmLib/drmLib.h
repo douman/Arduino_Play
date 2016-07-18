@@ -21,7 +21,8 @@
 
 
 #include "Arduino.h"
-#include <Wire.h>      // I2C and SPi
+#include <Wire.h>      // I2C and SPI
+#include <SPI.h>
 #include <TM1637Display.h> // 4 digit 7 seg display
 
 // Doug's Data structures, constants and enums
@@ -39,15 +40,13 @@
 #define MAX_LINE 180    // Max line buffer length
 #define NUMRTCREGS 19   // numbmer of registers on the RTC
 
+/* Can't do the struct thing in Arduino for some reason
+ *
 enum rtc_type 
 {
 	DS3231,
-	GPSFEATHER,
-	GPSGARMIN,
 	OTHER
 }
-/* Can't do the struct thing in Arduino for some reason
- *
 
 typedef struct parseTime {
   unsigned long lsec;
@@ -66,7 +65,7 @@ typedef struct parseTime {
 */
 
 // Routines in this Library
-int drmBcd2Dec(byte inbyte);
+int drmBcd2Dec(int inbyte);
 unsigned short drmSerialNo();
 void drmStartPrint(const char *drmversion);
 void drmPrtLead0(long in, int places);

@@ -1,3 +1,15 @@
+#include <Adafruit_Sensor.h>
+#include <Adafruit_LSM9DS0.h>
+#include <drmLib.h>
+#include <Adafruit_GPS.h>
+#include <Arduino.h>
+#include <SPI.h>
+#include <Adafruit_BLE.h>
+#include <Adafruit_BluefruitLE_SPI.h>
+#include <Adafruit_BluefruitLE_UART.h>
+
+#include "BluefruitConfig.h"
+
 #define OUT_SIZE 160
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
 #define BAT_AVG_CNT 4
