@@ -18,7 +18,7 @@ const char *version="M0_Feather_GPS -> V1.4-20160718 ";
  *  V1.1 by drm 20160622 serial toggles for various output (serial/BLE)
  *  V1.2 by drm 20160705 messing with output formats and sprintf for leading zeros
  *  V1.3 by drm 20160706 adjusting messages to sw design document
- *  V1.4 by drm 20160718 adding in 9 DoF sensor
+ *  V1.4 by drm 20160718 adding in 9 DoF sensor and update to 5 hz fix & reporting
  */
 
 Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
@@ -102,7 +102,11 @@ void setup()
   digitalWrite(GPSENABLE, LOW); // enable the GPS
   Serial1.begin(GPS_BAUD);
   myGPS.begin(GPS_BAUD);
-
+  myGPS.sendCommand(PMTK_API_SET_FIX_CTL_5HZ); // 5/sec fixes
+  myGPS.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ); // 5/sec updates
+  myGPS.sendCommand(PMTK_SET_NMEA_OUTPUT_ALLDATA); // all sentences
+  // myGPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY); // only the R sentence
+  
   // set up the GPS PPS interupt driver
   attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, RISING);
 }
@@ -204,7 +208,11 @@ void loop()
       {
         myGPS.parse(myGPS.lastNMEA());
         char *sentence = myGPS.lastNMEA();
-        if(serprt) Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
+        if(serprt) 
+        {
+          Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
+          if (sentence[4] == 'R') Serial.print(myGPS.satellites);
+        }
         if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
         {
           digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
@@ -218,17 +226,17 @@ void loop()
           if(serprt) Serial.println();
 
           char stemp[20];
-          sprintf(stemp, "%02d", myGPS.month);
-          out = String(log_cnt++) + "\trtc\t" + String(stemp) + "/";
-          sprintf(stemp, "%02d", myGPS.day);
-          out = out + String(stemp) + "/20";
           sprintf(stemp, "%02d", myGPS.year);
+          out = String(log_cnt++) + "\trtc\t20" + String(stemp);
+          sprintf(stemp, "%02d", myGPS.month);
+          out = out + String(stemp);
+          sprintf(stemp, "%02d", myGPS.day);
           out = out + String(stemp) + "\t";
 
           sprintf(stemp, "%02d", myGPS.hour);
-          out = out + String(stemp) + ":";
+          out = out + String(stemp);
           sprintf(stemp, "%02d", myGPS.minute);
-          out = out + String(stemp) + ":";
+          out = out + String(stemp);
           sprintf(stemp, "%02d", myGPS.seconds);
           out = out + String(stemp) + ".";
           sprintf(stemp, "%03d", myGPS.milliseconds) + "\t";
@@ -256,10 +264,11 @@ void loop()
           sprintf(sifmin, "%03d", ifmin);
           out = out + String(deg) + ":" + simin + "." + sifmin + " " + myGPS.lon;
 
-          out = out + "\r\n"+ String(log_cnt++) + "\tmisc\t";
-          out = out + String(myGPS.speed, 2) + " kt\t";
-          out = out + String(myGPS.altitude, 2) + "m\tn-> ";
-          out = out + String(myGPS.satellites);
+          out = out + "\t" + 
+                      String(myGPS.speed, 2) + " kt\t" +
+                      String(myGPS.angle, 2) + " deg\t" +
+                      String(myGPS.altitude, 2) + "m\tn-> " +
+                      String(myGPS.satellites);
           if(serprt)
           {
             if(serprt) Serial.println(out);

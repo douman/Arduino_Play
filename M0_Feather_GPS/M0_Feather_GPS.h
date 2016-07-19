@@ -38,6 +38,6 @@ long log_cnt=0;
 byte cksum, savecksum;
 volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0;
 float micro_factor=1.000, micro_corr = 0;
-boolean bleprt = false, serprt=true, wrt_ble = true;
+boolean bleprt = false, serprt=true, wrt_ble = false;
 volatile boolean new_sec = false;
 

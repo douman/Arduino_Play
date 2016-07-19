@@ -47,6 +47,7 @@ enum rtc_type
 	DS3231,
 	OTHER
 }
+ */
 
 typedef struct parseTime {
   unsigned long lsec;
@@ -62,7 +63,7 @@ typedef struct parseTime {
   byte csr;
   byte sr;
 };
-*/
+struct parseTime time_struct[1];
 
 // Routines in this Library
 int drmBcd2Dec(int inbyte);
