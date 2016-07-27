@@ -14,6 +14,8 @@
 #define GPS_BAUD 9600 // 9600 is factory, 57600 is faster
 #define BAT_AVG_CNT 4
 #define BLEMOD 20
+#define GPSmillis 1000
+#define NINEDoFmillis 1000
 // #define DEBUG
 
 // Define pins for M0 Feather BLE DiverLogger
@@ -34,10 +36,11 @@
 // Globals for the M0_Feather_GPS sketch
 
 long log_cnt=0;
-
+unsigned long lastGPSmillis = 0, lastNINEDoFmillis = 0;
 byte cksum, savecksum;
 volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0; // gps timing globals
 float micro_factor=1.000, micro_corr = 0;
+float batt_volts;
 volatile unsigned long rtc_sec_cnt=0, rtc_32768_cnt=0, rtc_latest_micro; // rtc timing globals
 boolean bleprt = false, serprt=true, wrt_ble = false;
 volatile boolean new_sec = false;

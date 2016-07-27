@@ -1,5 +1,5 @@
-#include "M0_Feather_GPS.h"
-const char *version="M0_Feather_GPS -> V1.5-20160720 ";
+#include "M0_DiveLogger.h"
+const char *version="M0_DiveLogger -> V1.6-20160726 ";
 
 // These are for bluefruit
 #define FACTORYRESET_ENABLE         1
@@ -20,6 +20,7 @@ const char *version="M0_Feather_GPS -> V1.5-20160720 ";
  *  V1.3 by drm 20160706 adjusting messages to sw design document
  *  V1.4 by drm 20160718 adding in 9 DoF sensor and update to 5 hz fix & reporting
  *  V1.5 by drm 20160720 preparing for RTC integration
+ *  V1.6 by drm 20160726 refactored and seperated GPS and 9DOF
  */
 
 Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
@@ -68,16 +69,8 @@ void configure9dof(void)
   my9DOF.setupGyro(my9DOF.LSM9DS0_GYROSCALE_245DPS);
 }
 
-void setup() 
+int nineDoFInit()
 {
-  Serial.begin(115200);
-  drmStartPrint(version);
-   
-  // initialize digital pin (LED) 13 as an output and the battery level as analog input
-  pinMode(LED, OUTPUT); digitalWrite(LED, LOW);
-  pinMode(BATT, INPUT); // Battery level adc input
-  analogReadResolution(12);
-
   /* Initialise the 9DOF sensor */
   if(!my9DOF.begin())
   {
@@ -87,7 +80,11 @@ void setup()
   }
   Serial.println(F("Found LSM9DS0 9DOF"));
   configure9dof();
-  
+  return(ST_AOK);  
+}
+
+int bleInit()
+{
   // Set up the Bluetooth LE
   if ( !ble.begin(VERBOSE_MODE) )
   {
@@ -108,7 +105,11 @@ void setup()
   ble.echo(false);
   // Set module to DATA mode
   ble.setMode(BLUEFRUIT_MODE_DATA);
+  return(ST_AOK);
+}
 
+int gpsInit()
+{
   // Set up the GPS
   pinMode(GPSPPSINT, INPUT);
   pinMode (GPSENABLE, OUTPUT);
@@ -122,15 +123,39 @@ void setup()
   myGPS.sendCommand(PMTK_SET_NMEA_OUTPUT_ALLDATA); // all sentences
   // myGPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY); // only the R sentence
   
+  
   // set up the GPS PPS interupt driver
   attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, RISING);
+  return(ST_AOK);
+}
+
+void setup() 
+{
+  Serial.begin(115200);
+   
+  // initialize digital pin (LED) 13 as an output and the battery level as analog input
+  analogReadResolution(12);
+  pinMode(LED, OUTPUT); digitalWrite(LED, LOW);
+  pinMode(BATT, INPUT); // Battery level adc input
+
+  /* Initialise the 9DOF sensor */
+  nineDoFInit();
+
+  // Set up the Bluetooth LE
+  bleInit();
+
+  // Set up the GPS
+  gpsInit();
+  
+  drmStartPrint(version);
 }
 
 // Read the IMU sensor
-void read9dof(void)
+void nineDoFProcess(void)
 {
+  lastNINEDoFmillis = millis();
   digitalWrite(LED, HIGH);
-  sensors_event_t accel, mag, gyro, temp;
+  sensors_event_t accel, mag, gyro, temp; // all local, no global knowledge of 9 DoF
   my9DOF.getEvent(&accel, &mag, &gyro, &temp); 
   digitalWrite(LED, LOW);
 
@@ -139,12 +164,10 @@ void read9dof(void)
 
   out = String(log_cnt++) + "\tacl\t" + String(accel.acceleration.x, 2) + "\t" + 
                                         String(accel.acceleration.y, 2) + "\t" + 
-                                        String(accel.acceleration.z, 2) + "\r\n";
-  out = out + 
+                                        String(accel.acceleration.z, 2) + "\r\n" +
         String(log_cnt++) + "\tgyr\t" + String(gyro.gyro.x, 2) + "\t" + 
                                         String(gyro.gyro.y, 2) + "\t" + 
-                                        String(gyro.gyro.z, 2) + "\r\n";
-  out = out + 
+                                        String(gyro.gyro.z, 2) + "\r\n" +
         String(log_cnt++) + "\tmag\t" + String(mag.magnetic.x, 2) + "\t" + 
                                         String(mag.magnetic.y, 2) + "\t" + 
                                         String(mag.magnetic.z, 2) + "\r\n";
@@ -164,52 +187,169 @@ void print_serial()
   if(serprt) Serial.println();
 }
 
+void micro_clk_corr()
+// Recalculate the 1sec microsecond correction (only for rational values of measured microseconds)
+{
+  if(new_sec && icnt > 10 && micro_intv > 999000 && micro_intv < 1001000)
+  {
+    long delta = 1000000 - micro_intv;
+    if(icnt == 11) micro_corr = delta;
+    micro_corr = (7.0 * micro_corr + ((float) delta))/8.0;
+    new_sec = false; // is reset to true by interrupt on GPS PPS
+  }
+  return;  
+}
+
+float read_batt()
+{
+  // Get and print Battery voltage at beginning of GPS sentence
+  float val=0;
+  int i;
+  for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(BATT);
+  val = val/(float)BAT_AVG_CNT;
+  // val = (val * (2*3.3))/1024; // at lower ADC resolution (10 bit)
+  val = (val * (2*3.3))/4096; // 12 bit ADC resolution
+  return(val);
+}
+
+int gpsProcess()
+{
+  String out = String(OUT_SIZE); // string for building the outptu string for GPS
+  lastGPSmillis = millis();
+  batt_volts = read_batt();
+  if (myGPS.newNMEAreceived()) 
+  {
+  myGPS.parse(myGPS.lastNMEA());
+  char *sentence = myGPS.lastNMEA();
+  if(serprt)
+    {
+      Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
+      if (sentence[4] == 'R') Serial.print(myGPS.satellites);
+    }
+    if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
+    {
+      if(millis() < 10000) 
+      {
+        drmStartPrint(version);
+        if(serprt) Serial.print(micro_intv); if(serprt) Serial.print(" ");
+        if(serprt) Serial.println(icnt);
+        print_serial();
+      }
+      if(serprt) Serial.println();
+      // Format and print the parsed values
+      digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
+      char stemp[20];
+      sprintf(stemp, "%02d", myGPS.year);
+      out = String(log_cnt++) + "\trtc\t20" + String(stemp);
+      sprintf(stemp, "%02d", myGPS.month);
+      out = out + String(stemp);
+      sprintf(stemp, "%02d", myGPS.day);
+      out = out + String(stemp) + "\t";
+    
+      sprintf(stemp, "%02d", myGPS.hour);
+      out = out + String(stemp);
+      sprintf(stemp, "%02d", myGPS.minute);
+      out = out + String(stemp);
+      sprintf(stemp, "%02d", myGPS.seconds);
+      out = out + String(stemp) + ".";
+      sprintf(stemp, "%03d", myGPS.milliseconds) + "\t";
+      out = out + String(stemp) + "\t";
+    
+      out = out + String(batt_volts) + "\tV";
+      out = out + "\r\n" + String(log_cnt++) + "\tgps\t";
+    
+      float fmin;
+      long deg, imin, ifmin;
+      char simin[4], sifmin[4];
+      deg = (int) (myGPS.latitude/100);
+      imin = (int) (myGPS.latitude - 100 * ((int) myGPS.latitude/100));
+      sprintf(simin, "%02d", imin);
+      fmin = myGPS.latitude - 100 * ((int) myGPS.latitude/100);
+      ifmin = (int) 1000 * (fmin - (float) imin);
+      sprintf(sifmin, "%03d", ifmin);
+      out = out + String(deg) + "\t" + simin + "." + sifmin + "\t";
+    
+      deg = (int) (myGPS.longitude/100);
+      imin = (int) (myGPS.longitude - 100 * ((int) myGPS.longitude/100));
+      sprintf(simin, "%02d", imin);
+      fmin = myGPS.longitude - 100 * ((int) myGPS.longitude/100);
+      ifmin = (int) 1000 * (fmin - (float) imin);
+      sprintf(sifmin, "%03d", ifmin);
+      out = out + String(deg) + "\t" + simin + "." + sifmin + "\t" + myGPS.lat + myGPS.lon;
+    
+      out = out + "\t" + 
+                  String(myGPS.speed, 2) + "\tkt\t" +
+                  String(myGPS.angle, 2) + "\tdeg\t" +
+                  String(myGPS.altitude, 2) + "\t" +
+                  String(myGPS.satellites);
+      if(serprt)
+      {
+        if(serprt) Serial.println(out);
+      }
+      if(wrt_ble && (bleprt || (icnt % BLEMOD == 0 && icnt > 10)))
+      {
+        bleprt=true;
+        ble.println(out);
+      }
+    
+      out = String(log_cnt++) + "\tmisc\t" + String(micro_intv) + "\t";
+      out = out + String(((float)micro_intv) + micro_corr, 1) + "\t";
+      out = out + String(micro_corr, 2) + "\t";
+      out = out + String(icnt);
+      if(serprt)
+      {
+        if(serprt) Serial.println(out);
+      }
+      if(bleprt)
+      {
+        ble.println(out);
+      }
+    }
+    digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
+    bleprt=false;
+  }
+  return(ST_AOK);
+}
+
 // the loop function runs over and over again forever
 void loop() 
 {
-  String out = String(OUT_SIZE);
-  int out_off=0;
   interrupts(); // Make sure interrupts are on
 
-  // send any serial input straight to the GPS unit
-  if (Serial.available()) 
+  // accept simple commands on serial input
+  if (Serial.available()) // 'b' or 'B' toggles bluetooth output 's' or 'S' toggles serial output
   {
     char c = Serial.read();
     if(c == 'B' || c == 'b') { bleprt = wrt_ble = !wrt_ble; Serial.print("BLE swap "); if(wrt_ble) Serial.print(" TRUE "); Serial.println(wrt_ble); }
     if(c == 'S' || c == 's') { serprt = !serprt; Serial.print("SER swap "); if(serprt) Serial.print(" TRUE "); Serial.println(serprt); }
-    Serial1.write(c);
   }
 /*  
-  if (ble.available()) 
+  if (ble.available()) // this does not work
   {
     char c = ble.read();
     if(c == 'B' || c == 'b') { wrt_ble = !wrt_ble; Serial.print("BLE swap "); if(wrt_ble) Serial.print(" TRUE "); Serial.println(wrt_ble); }
     if(c == 'S' || c == 's') { serprt = !serprt; Serial.print("SER swap "); if(serprt) Serial.print(" TRUE "); Serial.println(serprt); }
     Serial1.write(c);
   }
- *   
  */
+  
   // Recalculate the 1sec microsecond correction (only for rational values of measured microseconds)
-  if(new_sec && icnt > 10 && micro_intv > 999000 && micro_intv < 1001000)
-  {
-    long delta = 1000000 - micro_intv;
-    if(icnt == 11) micro_corr = delta;
-    micro_corr = (7.0 * micro_corr + ((float) delta))/8.0;
-    new_sec = false;
-  }
-  if (Serial1.available()) 
+  micro_clk_corr();
+
+  // Process GPS
+  boolean gpsGo = lastGPSmillis + GPSmillis < millis(); 
+  if (gpsGo) gpsProcess();
+  
+  // Process 9 DoF
+  boolean nineDoFGo = lastNINEDoFmillis + NINEDoFmillis < millis(); 
+  if (nineDoFGo) nineDoFProcess();
+  
+  if (Serial1.available())
   {
     char c = myGPS.read();
     
     if (c=='$')
     {
-      // Get and print Battery voltage at beginning of GPS sentence
-      float val=0;
-      int i;
-      for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(BATT);
-      val = val/(float)BAT_AVG_CNT;
-      // val = (val * (2*3.3))/1024; // at lower ADC resolution
-      val = (val * (2*3.3))/4096;
 #ifdef DEBUG
       if(serprt) Serial.println(myGPS.newNMEAreceived());
       if(serprt) Serial.print("Chsum-> ");
@@ -217,113 +357,23 @@ void loop()
       if(serprt) Serial.print(" - Fx: "); if(serprt) Serial.print((int)myGPS.fix);
       if(serprt) Serial.print(" quality: "); if(serprt) Serial.println((int)myGPS.fixquality);
 #endif
-
-      // Print the parsed values
-      if (myGPS.newNMEAreceived()) 
-      {
-        myGPS.parse(myGPS.lastNMEA());
-        char *sentence = myGPS.lastNMEA();
-        if(serprt) 
-        {
-          Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
-          if (sentence[4] == 'R') Serial.print(myGPS.satellites);
-        }
-        if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
-        {
-          digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
-          if(millis() < 10000) 
-          {
-            drmStartPrint(version);
-            if(serprt) Serial.print(micro_intv); if(serprt) Serial.print(" ");
-            if(serprt) Serial.println(icnt);
-            print_serial();
-          }
-          if(serprt) Serial.println();
-
-          char stemp[20];
-          sprintf(stemp, "%02d", myGPS.year);
-          out = String(log_cnt++) + "\trtc\t20" + String(stemp);
-          sprintf(stemp, "%02d", myGPS.month);
-          out = out + String(stemp);
-          sprintf(stemp, "%02d", myGPS.day);
-          out = out + String(stemp) + "\t";
-
-          sprintf(stemp, "%02d", myGPS.hour);
-          out = out + String(stemp);
-          sprintf(stemp, "%02d", myGPS.minute);
-          out = out + String(stemp);
-          sprintf(stemp, "%02d", myGPS.seconds);
-          out = out + String(stemp) + ".";
-          sprintf(stemp, "%03d", myGPS.milliseconds) + "\t";
-          out = out + String(stemp) + "\t";
-
-          out = out + String(val) + " V";
-          out = out + "\r\n" + String(log_cnt++) + "\tgps\t";
-
-          float fmin;
-          long deg, imin, ifmin;
-          char simin[4], sifmin[4];
-          deg = (int) (myGPS.latitude/100);
-          imin = (int) (myGPS.latitude - 100 * ((int) myGPS.latitude/100));
-          sprintf(simin, "%02d", imin);
-          fmin = myGPS.latitude - 100 * ((int) myGPS.latitude/100);
-          ifmin = (int) 1000 * (fmin - (float) imin);
-          sprintf(sifmin, "%03d", ifmin);
-          out = out + String(deg) + ":" + simin + "." + sifmin + " " + myGPS.lat + "\t";
-
-          deg = (int) (myGPS.longitude/100);
-          imin = (int) (myGPS.longitude - 100 * ((int) myGPS.longitude/100));
-          sprintf(simin, "%02d", imin);
-          fmin = myGPS.longitude - 100 * ((int) myGPS.longitude/100);
-          ifmin = (int) 1000 * (fmin - (float) imin);
-          sprintf(sifmin, "%03d", ifmin);
-          out = out + String(deg) + ":" + simin + "." + sifmin + " " + myGPS.lon;
-
-          out = out + "\t" + 
-                      String(myGPS.speed, 2) + " kt\t" +
-                      String(myGPS.angle, 2) + " deg\t" +
-                      String(myGPS.altitude, 2) + "m\tn-> " +
-                      String(myGPS.satellites);
-          if(serprt)
-          {
-            if(serprt) Serial.println(out);
-          }
-          if(wrt_ble && (bleprt || (icnt % BLEMOD == 0 && icnt > 10)))
-          {
-            bleprt=true;
-            ble.println(out);
-          }
-
-          out = String(log_cnt++) + "\tmisc\t" + String(micro_intv) + "\t";
-          out = out + String(((float)micro_intv) + micro_corr, 1) + "\t";
-          out = out + String(micro_corr, 2) + "\t";
-          out = out + String(icnt);
-          if(serprt)
-          {
-            if(serprt) Serial.println(out);
-          }
-          if(bleprt)
-          {
-            ble.println(out);
-          }
-          
-          digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
-          bleprt=false;
-          read9dof();
-        }
       }
-      
+    }
+
+  // process characters from GPS
+  if (Serial1.available())
+  {
+    char c = myGPS.read();
+    
+    if (c=='$') // end of a GPS sentence
+    {
       // Start for Calculating sentence checksum
+      savecksum = cksum;
       cksum = 0;
     }
     else if (c!='*')
     {
       cksum = cksum ^ c; // xor for checksum calculation
     }
-    else
-    {
-      savecksum = cksum;
-    }
-    // Serial.write(c);
   }
 }
