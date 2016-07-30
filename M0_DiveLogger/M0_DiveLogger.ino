@@ -56,19 +56,6 @@ void error(const __FlashStringHelper*err)
   while (1);
 }
 
-//    Configures the gain and integration time for the TSL2561
-void configure9dof(void)
-{
-  // 1.) Set the accelerometer range
-  my9DOF.setupAccel(my9DOF.LSM9DS0_ACCELRANGE_2G);
-  
-  // 2.) Set the magnetometer sensitivity
-  my9DOF.setupMag(my9DOF.LSM9DS0_MAGGAIN_2GAUSS);
-
-  // 3.) Setup the gyroscope
-  my9DOF.setupGyro(my9DOF.LSM9DS0_GYROSCALE_245DPS);
-}
-
 int nineDoFInit()
 {
   /* Initialise the 9DOF sensor */
@@ -79,7 +66,12 @@ int nineDoFInit()
     while(1);
   }
   Serial.println(F("Found LSM9DS0 9DOF"));
-  configure9dof();
+  // 1.) Set the accelerometer range
+  my9DOF.setupAccel(my9DOF.LSM9DS0_ACCELRANGE_2G);
+  // 2.) Set the magnetometer sensitivity
+  my9DOF.setupMag(my9DOF.LSM9DS0_MAGGAIN_2GAUSS);
+  // 3.) Setup the gyroscope
+  my9DOF.setupGyro(my9DOF.LSM9DS0_GYROSCALE_245DPS);
   return(ST_AOK);  
 }
 
@@ -123,8 +115,7 @@ int gpsInit()
   myGPS.sendCommand(PMTK_SET_NMEA_OUTPUT_ALLDATA); // all sentences
   // myGPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY); // only the R sentence
   
-  
-  // set up the GPS PPS interupt driver
+    // set up the GPS PPS interupt driver
   attachInterrupt(digitalPinToInterrupt(GPSPPSINT), pps_int, RISING);
   return(ST_AOK);
 }
@@ -217,10 +208,9 @@ int gpsProcess()
   String out = String(OUT_SIZE); // string for building the outptu string for GPS
   lastGPSmillis = millis();
   batt_volts = read_batt();
-  if (myGPS.newNMEAreceived()) 
-  {
-  myGPS.parse(myGPS.lastNMEA());
   char *sentence = myGPS.lastNMEA();
+  // Serial.println("gpsProcess");
+  Serial.println(sentence);
   if(serprt)
     {
       Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
@@ -307,7 +297,6 @@ int gpsProcess()
     }
     digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
     bleprt=false;
-  }
   return(ST_AOK);
 }
 
@@ -337,7 +326,8 @@ void loop()
   micro_clk_corr();
 
   // Process GPS
-  boolean gpsGo = lastGPSmillis + GPSmillis < millis(); 
+  char *sentence = myGPS.lastNMEA();
+  boolean gpsGo = /* myGPS.newNMEAreceived() && */ (lastGPSmillis + GPSmillis < millis()) && (sentence[4] == 'R');
   if (gpsGo) gpsProcess();
   
   // Process 9 DoF
@@ -370,6 +360,7 @@ void loop()
       // Start for Calculating sentence checksum
       savecksum = cksum;
       cksum = 0;
+      myGPS.parse(myGPS.lastNMEA());
     }
     else if (c!='*')
     {
