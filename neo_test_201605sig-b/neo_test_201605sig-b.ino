@@ -1,15 +1,7 @@
-// 
 // Neopixels with new ring and line parts from China drm 20160512
-// V1.0 based on code from Adafruit
-const char *version="neo_test_201605sig-a -> V1.1-20160522 ";
+// V1.1 based on code from Adafruit
+const char *version="neo_test_201605sig-b -> V1.1-20160805 ";
 
-// #include <Arduino.h>
-
-// #include <avr/sleep.h>
-// #include <avr/power.h>
-// #include <avr/wdt.h>
-// #include <Wire.h>
-// #include <EEPROM.h>
 #include <drmLib.h>
 
 #include <Adafruit_NeoPixel.h>
@@ -19,10 +11,10 @@ const char *version="neo_test_201605sig-a -> V1.1-20160522 ";
 #define PIN_L           A0 // pin driving the neopixels line
 #define NUMPIXELS_R     16 // How many NeoPixels in the ring
 #define NUMPIXELS_L      8 // How many NeoPixels in the line
-#define INTENMAX        10 // Maximum intensity
-#define DELAYBASE      40 // Base delay increment
-#define GREENMULT        3 // green duration extension
-#define REDMULT          3 // green duration extension
+#define INTENMAX       200 // Maximum intensity
+#define DELAYBASE     1000 // Base delay increment
+#define GREENMULT        4 // green duration extension
+#define REDMULT          2 // green duration extension
 #define MAXSTATE         6 // maximum number of states
 
 enum trafsig

@@ -4,6 +4,9 @@
   ported to Arduino 20160727 by drm
 */
 #include <math.h>
+#include <drmLib.h>
+const char *version="prime -> V5.0-20160805 ";
+
   long divsor, hilm = 2000000000, lwlm = 100000001, count = 0;
   long num;
   boolean prime, restart = false;
@@ -11,7 +14,7 @@
 void setup()
 {
   Serial.begin(115200);
-  // put your setup code here, to run once:
+  drmStartPrint(version);
   num = lwlm;
   count = 0;
 }
