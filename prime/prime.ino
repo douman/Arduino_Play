@@ -4,7 +4,7 @@
   ported to Arduino 20160727 by drm
 */
 #include <math.h>
-  long divsor, hilm = 2000000, lwlm = 3, count = 0;
+  long divsor, hilm = 2000000000, lwlm = 100000001, count = 0;
   long num;
   boolean prime, restart = false;
 

@@ -27,14 +27,13 @@ Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
 Adafruit_LSM9DS0 my9DOF = Adafruit_LSM9DS0();  // i2c 9DOF sensor
 Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST); // Bluetooth LE
 
-// the setup function runs once when you press reset or power the board
 void pps_int()
 {
   micro_end = micros();
   micro_intv = micro_end - micro_beg;
   micro_beg = micro_end;
   new_sec = true;
-  icnt++;
+  ppscnt++;
 }
 
 void rtc_pps_int()
@@ -120,9 +119,11 @@ int gpsInit()
   return(ST_AOK);
 }
 
+// the setup function runs once when you press reset or power the board
 void setup() 
 {
   Serial.begin(115200);
+  delay(2000);
    
   // initialize digital pin (LED) 13 as an output and the battery level as analog input
   analogReadResolution(12);
@@ -181,10 +182,10 @@ void print_serial()
 void micro_clk_corr()
 // Recalculate the 1sec microsecond correction (only for rational values of measured microseconds)
 {
-  if(new_sec && icnt > 10 && micro_intv > 999000 && micro_intv < 1001000)
+  if(new_sec && ppscnt > 10 && micro_intv > 999000 && micro_intv < 1001000)
   {
     long delta = 1000000 - micro_intv;
-    if(icnt == 11) micro_corr = delta;
+    if(ppscnt == 11) micro_corr = delta;
     micro_corr = (7.0 * micro_corr + ((float) delta))/8.0;
     new_sec = false; // is reset to true by interrupt on GPS PPS
   }
@@ -210,7 +211,7 @@ int gpsProcess()
   batt_volts = read_batt();
   char *sentence = myGPS.lastNMEA();
   // Serial.println("gpsProcess");
-  Serial.println(sentence);
+  if(serprt) Serial.println(sentence);
   if(serprt)
     {
       Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
@@ -218,13 +219,6 @@ int gpsProcess()
     }
     if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
     {
-      if(millis() < 10000) 
-      {
-        drmStartPrint(version);
-        if(serprt) Serial.print(micro_intv); if(serprt) Serial.print(" ");
-        if(serprt) Serial.println(icnt);
-        print_serial();
-      }
       if(serprt) Serial.println();
       // Format and print the parsed values
       digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
@@ -276,16 +270,18 @@ int gpsProcess()
       {
         if(serprt) Serial.println(out);
       }
-      if(wrt_ble && (bleprt || (icnt % BLEMOD == 0 && icnt > 10)))
+      if(wrt_ble && (ppscnt % BLEMOD == 0 && ppscnt > 10))
       {
         bleprt=true;
         ble.println(out);
       }
     
-      out = String(log_cnt++) + "\tmisc\t" + String(micro_intv) + "\t";
-      out = out + String(((float)micro_intv) + micro_corr, 1) + "\t";
-      out = out + String(micro_corr, 2) + "\t";
-      out = out + String(icnt);
+      out = String(log_cnt++) + "\tmisc\t" + String(micro_intv) + "\t" +
+            String(((float)micro_intv) + micro_corr, 1) + "\t" +
+            String(micro_corr, 2) + "\t" +
+            String(ppscnt) + "\t" + 
+            String(millis()) + "\t" + 
+            String(micros());
       if(serprt)
       {
         if(serprt) Serial.println(out);
@@ -313,17 +309,22 @@ void loop()
     if(c == 'S' || c == 's') { serprt = !serprt; Serial.print("SER swap "); if(serprt) Serial.print(" TRUE "); Serial.println(serprt); }
   }
 /*  
-  if (ble.available()) // this does not work
-  {
-    char c = ble.read();
-    if(c == 'B' || c == 'b') { wrt_ble = !wrt_ble; Serial.print("BLE swap "); if(wrt_ble) Serial.print(" TRUE "); Serial.println(wrt_ble); }
-    if(c == 'S' || c == 's') { serprt = !serprt; Serial.print("SER swap "); if(serprt) Serial.print(" TRUE "); Serial.println(serprt); }
-    Serial1.write(c);
-  }
+  Figure out logic to turn on BLE output from monitoring BLE input (previous code did not work)
  */
   
   // Recalculate the 1sec microsecond correction (only for rational values of measured microseconds)
   micro_clk_corr();
+
+  // Print Serial number
+  unsigned long temp_millis = millis();
+  if((temp_millis < 10000) && (temp_millis - 1000 > serprt_millis))
+      {
+        serprt_millis = temp_millis;
+        drmStartPrint(version);
+        if(serprt) Serial.print(micro_intv); if(serprt) Serial.print(" ");
+        if(serprt) Serial.println(ppscnt);
+        print_serial();
+      }
 
   // Process GPS
   char *sentence = myGPS.lastNMEA();

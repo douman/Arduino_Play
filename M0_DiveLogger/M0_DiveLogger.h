@@ -36,9 +36,9 @@
 // Globals for the M0_Feather_GPS sketch
 
 long log_cnt=0;
-unsigned long lastGPSmillis = 0, lastNINEDoFmillis = 0;
+unsigned long lastGPSmillis = 0, lastNINEDoFmillis = 0, serprt_millis = 0;
 byte cksum, savecksum;
-volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, icnt=0; // gps timing globals
+volatile unsigned long micro_beg=0, micro_end=0, micro_intv=999, ppscnt=0; // gps timing globals
 float micro_factor=1.000, micro_corr = 0;
 float batt_volts;
 volatile unsigned long rtc_sec_cnt=0, rtc_32768_cnt=0, rtc_latest_micro; // rtc timing globals

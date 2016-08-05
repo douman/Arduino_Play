@@ -16,11 +16,13 @@ const char *version="neo_test_201605sig-a -> V1.1-20160522 ";
 
 // Defines for the neopixels
 #define PIN_R            8 // pin driving the neopixels ring
-#define PIN_L            7 // pin driving the neopixels line
+#define PIN_L           A0 // pin driving the neopixels line
 #define NUMPIXELS_R     16 // How many NeoPixels in the ring
 #define NUMPIXELS_L      8 // How many NeoPixels in the line
-#define INTENMAX         1 // Maximum intensity
-#define DELAYBASE      1500 // Base delay increment
+#define INTENMAX        10 // Maximum intensity
+#define DELAYBASE      40 // Base delay increment
+#define GREENMULT        3 // green duration extension
+#define REDMULT          3 // green duration extension
 #define MAXSTATE         6 // maximum number of states
 
 enum trafsig
@@ -29,9 +31,17 @@ enum trafsig
   green,
   yellow
 };
+// 4 lit
+// const int pstart[3] = {4, 0, 2};
+// const int pend[3] = {7, 3, 5};
 
-const int pstart[3] = {5, 0, 3};
-const int pend[3] = {7, 2, 5};
+// 2 lit
+const int pstart[3] = {6, 0, 3};
+const int pend[3] = {7, 1, 4};
+
+// 1 lit
+// const int pstart[3] = {7, 0, 4};
+// const int pend[3] = {7, 0, 4};
 
 const int SIG_COLOR[3][3] = {{INTENMAX, 0, 0},         // red
                               {0, INTENMAX, 0},         // blue
@@ -146,14 +156,14 @@ void loop()
       switch (state) 
       {
       case 0:  // red light
-        light(red); delayval=DELAYBASE;
+        light(red); delayval=DELAYBASE*REDMULT;
         break;
       case 1:  // red to green
         light_transtion(red, green, 1);
         delayval=0;
         break;
       case 2:  // green light
-        light(green); delayval=DELAYBASE;
+        light(green); delayval=DELAYBASE*GREENMULT;
         break;
       case 3:  // green to yellow
         light_transtion(green, yellow, 1);
