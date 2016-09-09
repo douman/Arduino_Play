@@ -1,7 +1,7 @@
 // 
 // Neopixels with new ring and line parts from China drm 20160512
 // V1.0 based on code from Adafruit
-const char *version="neo_test_201605a -> V1.1-20160522 ";
+const char *version="neo_test_201605a -> V1.2-20160807 ";
 
 #include <Arduino.h>
 
@@ -15,16 +15,16 @@ const char *version="neo_test_201605a -> V1.1-20160522 ";
 
 // Defines for the neopixels
 #define PIN_R            8 // pin driving the neopixels ring
-#define PIN_L            7 // pin driving the neopixels line
-#define NUMPIXELS_R      16 // How many NeoPixels in the ring
+#define PIN_L           A0 // pin driving the neopixels line
+#define NUMPIXELS_R     16 // How many NeoPixels in the ring
 #define NUMPIXELS_L      8 // How many NeoPixels in the line
-#define INTENMAX 255 // Maximum intensity
+#define INTENMAX        33 // Maximum intensity
 
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
 Adafruit_NeoPixel pixels_r = Adafruit_NeoPixel(NUMPIXELS_R, PIN_R, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel pixels_l = Adafruit_NeoPixel(NUMPIXELS_L, PIN_L, NEO_GRB + NEO_KHZ800);
 
-int delayval = 50; // delay between writes
+int delayval = 100; // delay between writes
 
 void setup() 
 {
@@ -44,10 +44,10 @@ void loop() {
     int r, g, b;
     r=((n&1)!=0);
     g=((n&2)!=0);
-    b=((n&4)!=0);    
+    b=((n&4)!=0); 
     
     // Loop through intensities
-    for(int m=1; m<min(255,INTENMAX); m+=19)
+    for(int m=1; m<min(255,INTENMAX); m*=2)
     {
       Serial.print("m=");
       Serial.println(m);

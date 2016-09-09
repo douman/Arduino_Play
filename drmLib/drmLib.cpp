@@ -3,8 +3,9 @@
   Created by drm 20151213
   History
   -------
-  V2.0 --> trying to add RTC routines to this library, did not work (see comments)
+  V2.0 --> adding RTC routines to this library, did not work (see comments)
   V2.1 --> ifdef(ing) for M0 cases
+  V2.2 --> more on SAM serialno
 */
 
 #include "drmLib.h"
@@ -28,6 +29,21 @@ unsigned short drmSerialNo()
   return(EEPROM.read(5) << 8 | EEPROM.read(6)); // combine two bytes into in serial number (drm specific)
 #endif
 }
+
+// new proc 20160902
+char * drmSAMSerialNo(char *outbuf, buflen)
+{
+	if(buflen == 0 || outbuf == NULL)
+	{
+		outbuf = new String(20);
+	}
+	long s[4], *ser;
+  ser = (long *) 0x0080A00C; // address of the processor serial number
+  int i;
+  for (i=3; i>=0; i--) s[i] = *ser++;
+  for(i=0; i<4; i++) Serial.print(s[i], HEX);
+}
+
 
 // Printout the standard drm Arduino start message
 void drmStartPrint(const char *drmversion) 

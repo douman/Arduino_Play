@@ -5,10 +5,11 @@
   V1.0 --> First with EEPROM access and start print
   V2.0 --> adding RTC access
   V2.1 --> ifdef(ing) for M0 cases
+  V2.2 --> more on SAM serialno
 */
 #ifndef drmLib_h
 #define drmLib_h
-#define drmLibVer "drmLib V2.1 -- 20160603"
+#define drmLibVer "drmLib V2.2 -- 20160902"
 
 
 #if !defined(ARDUINO_ARCH_SAM) && !defined(ARDUINO_ARCH_SAMD) && !defined(ESP8266) && !defined(ARDUINO_ARCH_STM32F2)
@@ -68,6 +69,7 @@ struct parseTime time_struct[1];
 // Routines in this Library
 int drmBcd2Dec(int inbyte);
 unsigned short drmSerialNo();
+char * drmSAMSerialNo(); // New 20160902
 void drmStartPrint(const char *drmversion);
 void drmPrtLead0(long in, int places);
 void printTime(unsigned long milli_time);
