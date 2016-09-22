@@ -1,5 +1,5 @@
 #include "M0_DiveLogger.h"
-const char *version="M0_DiveLogger -> V1.6-20160726 ";
+const char *version="M0_DiveLogger -> V1.7-20160920 ";
 
 // These are for bluefruit
 #define FACTORYRESET_ENABLE         1
@@ -21,6 +21,7 @@ const char *version="M0_DiveLogger -> V1.6-20160726 ";
  *  V1.4 by drm 20160718 adding in 9 DoF sensor and update to 5 hz fix & reporting
  *  V1.5 by drm 20160720 preparing for RTC integration
  *  V1.6 by drm 20160726 refactored and seperated GPS and 9DOF
+ *  V1.7 by drm 20160920 minor tweeks, thinking about WiFi Feather M0
  */
 
 Adafruit_GPS myGPS(&Serial1);                  // Ultimate GPS FeatherWing
@@ -138,8 +139,12 @@ void setup()
 
   // Set up the GPS
   gpsInit();
-  
+
+  Serial.print("SerBuf0-> ");
+  Serial.println(Serial.availableForWrite());
   drmStartPrint(version);
+  Serial.print("SerBuf1-> ");
+  Serial.println(Serial.availableForWrite());
 }
 
 // Read the IMU sensor
@@ -171,7 +176,7 @@ void nineDoFProcess(void)
                                         String(mag.magnetic.z, 2) + "\t" +
                                         String(sqrt(mag.magnetic.x * mag.magnetic.x + 
                                                     mag.magnetic.y * mag.magnetic.y + 
-                                                    mag.magnetic.z * mag.magnetic.z), 2) +"\r\n";
+                                                    mag.magnetic.z * mag.magnetic.z), 2);
   if(serprt) Serial.println(out);
 }
 
@@ -219,16 +224,14 @@ int gpsProcess()
   lastGPSmillis = millis();
   batt_volts = read_batt();
   char *sentence = myGPS.lastNMEA();
-  // Serial.println("gpsProcess");
-  if(serprt) Serial.println(sentence);
+  if(serprt) {Serial.print("# "); Serial.println((sentence+1)); }
   if(serprt)
     {
-      Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
-      if (sentence[4] == 'R') Serial.print(myGPS.satellites);
+      // Serial.print(sentence[4]); // uniquely identify what kind of NMEA sentance
+      if (sentence[4] == 'R') {Serial.print("# R"); Serial.println(myGPS.satellites); }
     }
     if (myGPS.fix && sentence[4] == 'R') // print only for "R" and we have a fix
     {
-      if(serprt) Serial.println();
       // Format and print the parsed values
       digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
       char stemp[20];
@@ -314,8 +317,27 @@ void loop()
   if (Serial.available()) // 'b' or 'B' toggles bluetooth output 's' or 'S' toggles serial output
   {
     char c = Serial.read();
-    if(c == 'B' || c == 'b') { bleprt = wrt_ble = !wrt_ble; Serial.print("BLE swap "); if(wrt_ble) Serial.print(" TRUE "); Serial.println(wrt_ble); }
-    if(c == 'S' || c == 's') { serprt = !serprt; Serial.print("SER swap "); if(serprt) Serial.print(" TRUE "); Serial.println(serprt); }
+    if(c == 'B' || c == 'b') 
+    { 
+      bleprt = wrt_ble = !wrt_ble; 
+      Serial.print("# BLE swap "); 
+      if(wrt_ble) Serial.print(" TRUE "); 
+      Serial.println(wrt_ble); 
+    }
+    if(c == 'S' || c == 's') 
+    { 
+      serprt = !serprt; 
+      Serial.print("# SER swap "); 
+      if(serprt) 
+      {
+        Serial.print("# SerBuf0-> ");
+        Serial.print(Serial.availableForWrite());
+        Serial.println(" TRUE ");
+        Serial.print("# SerBuf0-> ");
+        Serial.println(Serial.availableForWrite()); 
+      }
+      Serial.println(serprt); 
+    }
   }
 /*  
   Figure out logic to turn on BLE output from monitoring BLE input (previous code did not work)
@@ -326,12 +348,15 @@ void loop()
 
   // Print Serial number
   unsigned long temp_millis = millis();
-  if((temp_millis < 10000) && (temp_millis - 1000 > serprt_millis))
+  if((temp_millis < 10000) && (temp_millis - 1000 > serprt_millis)) // only early on
       {
         serprt_millis = temp_millis;
+        Serial.print("# SerBuf0-> ");
+        Serial.println(Serial.availableForWrite());
         drmStartPrint(version);
-        if(serprt) Serial.print(micro_intv); if(serprt) Serial.print(" ");
-        if(serprt) Serial.println(ppscnt);
+        Serial.print("# SerBuf1-> ");
+        Serial.println(Serial.availableForWrite());
+        if(serprt) { Serial.print("# "); Serial.print(micro_intv); Serial.print(" "); Serial.println(ppscnt); }
         print_serial();
       }
 

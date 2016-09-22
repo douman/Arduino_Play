@@ -5,14 +5,18 @@
 */
 #include <math.h>
 #include <drmLib.h>
+#define LED 13
+
 const char *version="prime -> V5.0-20160805 ";
 
   long divsor, hilm = 2000000000, lwlm = 100000001, count = 0;
+//  long divsor, hilm = 2000000000, lwlm = 1, count = 0;
   long num;
   boolean prime, restart = false;
 
 void setup()
 {
+  pinMode(LED, OUTPUT);
   Serial.begin(115200);
   drmStartPrint(version);
   num = lwlm;
@@ -21,7 +25,7 @@ void setup()
 
 void loop() 
 {
-  if (num % 2 == 0) return;
+  if (num % 2 == 0) num++;
   prime = true;
   for (divsor=3;divsor <= (long)sqrt ((double)num) && prime == true;divsor=divsor+2)
   {
@@ -29,9 +33,11 @@ void loop()
   }
   if (prime)
   {
-    Serial.print(num); Serial.print("  ");
+    digitalWrite(LED, true);
+    Serial.print(num); Serial.print("\t");
     count++;
-    if (count % 10 == 0) Serial.print("\n");
+    if (count % 10 == 0) Serial.println();
+    digitalWrite(LED, false);
   }
   num = num + 2;
   if(Serial.available())
