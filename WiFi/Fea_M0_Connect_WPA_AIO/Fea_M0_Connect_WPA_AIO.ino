@@ -7,16 +7,10 @@
  const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.0-20160926 ";
 #include <drmLib.h>
 
-#include <SPI.h>
-#include "AdafruitIO_WiFi.h"
-// replaced by AdafuitIO_WiFi.h -- #include <WiFi101.h>
+#include "config.h"
 
-#include <Adafruit_MQTT.h>
-#include <Adafruit_MQTT_Client.h>
+AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 
-#include <AdafruitIO.h>
-#include <AdafruitIO_Data.h>
-#include <AdafruitIO_Definitions.h>
 
 #define LED           13
 #define BATT          A7
@@ -38,23 +32,6 @@ int status = WL_IDLE_STATUS;     // the Wifi radio's status
 float batt_volts;
 int serial_wrt_free;
 long millis_start;
-
-WiFiClient client;
-Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
-
-// Setup feeds 
-Adafruit_MQTT_Publish FeatherM0Millis = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/FeatherM0Millis");
-Adafruit_MQTT_Publish ntpTime = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/ntpTime");
-
-// UDP for ntp client
-unsigned int localPort = 2390;      // Local port to listen for UDP packets
-IPAddress timeServer(129,6,15,28);  // time.nist.gov NTP server
-const int NTP_PACKET_SIZE = 48;     // NTP time stamp is in the first 48 bytes
-byte packetBuffer[NTP_PACKET_SIZE]; // Buffer for incoming and outgoing UDP packets
- 
-WiFiClient Udp;           // Set up a WINC1500 client session
-// doesn't work! Adafruit_WINC1500UDP Udp;           // Set up a WINC1500 client session
-
 
 void setup() 
 {
@@ -110,7 +87,6 @@ void setup()
 void loop() 
 {
   // check the network connection once every 5 seconds:
-  delay(5000);
   printCurrentNet();
   printWifiData();
 }
