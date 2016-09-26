@@ -11,22 +11,10 @@
 
 AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 
-
-#define LED           13
-#define BATT          A7
-#define BAT_AVG_CNT   4
-
-// The lines included below are authentication information and are not in GitHub
-#include "C:\drm\PrivCode\WiFi_auth.h"
-#include "C:\drm\PrivCode\Adafruit_IO_auth.h"
-
-//------ The items below are defined in the WiFi_auth.h include file
-// #define WIFI_SSID       "your_ssid"
-// #define WIFI_PASS       "your_pass"
-
-//------ The items below are defined in the Adafruit_IO_auth.h include file
-// #define AIO_USERNAME    "your_username"
-// #define AIO_KEY         "your_key"
+// Set up the AIO feeds
+AdafruitIO_Feed *volts = aio.feed("volts");
+AdafruitIO_Feed *secs = aio.feed("secs");
+AdafruitIO_Feed *sout_buf = aio.feed("sout_buf");
 
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 float batt_volts;
@@ -81,12 +69,35 @@ void setup()
   Serial.print("You're connected to the network");
   printCurrentNet();
   printWifiData();
+  Serial.print("Connecting to Adafruit IO");
 
+  // connect to io.adafruit.com
+  aio.connect();
+
+  // wait for a connection
+  while(aio.status() < AIO_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  // we are connected
+  Serial.println();
+  Serial.print("AdaFruit IO Connection Sucess-> ");
+  Serial.println(aio.statusText());
+
+  // WiFi.setSleepMode(M2M_PS_H_AUTOMATIC, 1); // go into power save mode when possible! 
+  // WiFi.setSleepMode(M2M_PS_MANUAL, 1);
 }
 
 void loop() 
 {
+  aio.run();
+  volts->save(batt_volts);
+  secs->save((millis()-millis_start)/1000);
+  sout_buf->save(serial_wrt_free);
+ 
   // check the network connection once every 5 seconds:
+  delay(15000);
   printCurrentNet();
   printWifiData();
 }
