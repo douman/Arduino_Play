@@ -23,7 +23,7 @@ long count = 0;
 
 void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
-  WiFi.setPins(8,7,4,2);  // Initialize serial
+  WiFi.setPins(8,7,4,2);  // Configure Feather M0 WiFi Pins
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   
