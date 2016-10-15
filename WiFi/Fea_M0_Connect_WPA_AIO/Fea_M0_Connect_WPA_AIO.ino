@@ -21,12 +21,9 @@ int status = WL_IDLE_STATUS;     // the Wifi radio's status
 float batt_volts;
 int serial_wrt_free;
 long millis_start;
-<<<<<<< HEAD
 unsigned long last_run_secs = 0;
 boolean serPrt = true;
 // boolean serPrt = false;
-=======
->>>>>>> parent of 30f0b44... WiFi AdaFruitIO Working
 
 void setup() 
 {
