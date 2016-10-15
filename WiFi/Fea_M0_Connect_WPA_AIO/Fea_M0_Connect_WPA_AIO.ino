@@ -9,7 +9,8 @@
 
 #include "config.h"
 
-AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
+// AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
+AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID,"");
 
 // Set up the AIO feeds
 AdafruitIO_Feed *volts = aio.feed("volts");
@@ -21,8 +22,8 @@ float batt_volts;
 int serial_wrt_free;
 long millis_start;
 unsigned long last_run_secs = 0;
-// boolean serPrt = true;
-boolean serPrt = false;
+boolean serPrt = true;
+// boolean serPrt = false;
 
 void setup() 
 {
@@ -64,7 +65,10 @@ void setup()
     if(serPrt) Serial.print("Attempting to connect to WPA SSID: ");
     if(serPrt) Serial.println(ssid);
     // Connect to WPA/WPA2 network:
-    status = WiFi.begin(ssid, pass);
+    // if (pass == "")
+      status = WiFi.begin(ssid);
+    // else
+      // status = WiFi.begin(ssid, pass);
 
     // wait 5 seconds for connection:
     delay(5000);
