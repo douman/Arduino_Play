@@ -1,9 +1,8 @@
 // AIO and WiFi configuration stuff
 
 #include <SPI.h>
-// replaced by AdafuitIO_WiFi.h -- 
-#include <WiFi101.h>
 #include "AdafruitIO_WiFi.h"
+// replaced by AdafuitIO_WiFi.h -- #include <WiFi101.h>
 
 #include <Adafruit_MQTT.h>
 #include <Adafruit_MQTT_Client.h>
