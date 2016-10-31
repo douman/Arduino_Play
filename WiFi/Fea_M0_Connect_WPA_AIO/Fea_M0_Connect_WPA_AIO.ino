@@ -102,7 +102,7 @@ void loop()
     { 
       serPrt = !serPrt; 
       Serial.print("# SER swap "); 
-      if(serPrt) Serial.println(serPrt); 
+      Serial.println(serPrt); 
     }
   }
   int delay_sec = 15;
@@ -144,6 +144,7 @@ void printCurrentNet()
 {
   // print the SSID of the network you're attached to:
   if(serPrt) Serial.println();
+  if(serPrt) Serial.println();
   if(serPrt) Serial.print("SSID: ");
   if(serPrt) Serial.println(WiFi.SSID());
 
@@ -153,11 +154,13 @@ void printCurrentNet()
   
   // Get voltage, store in global and print
   if(serPrt) Serial.print("Volts: ");
-  if(serPrt) Serial.println(batt_volts = read_batt());
+  batt_volts = read_batt();
+  if(serPrt) Serial.println(batt_volts);
 
   // Get serial buffer free, store in global and print
   if(serPrt) Serial.print("WriteFree: ");
-  if(serPrt) Serial.println(serial_wrt_free = Serial.availableForWrite());
+  serial_wrt_free = Serial.availableForWrite();
+  if(serPrt) Serial.println(serial_wrt_free);
 
   // print the MAC address of the router you're attached to:
   byte bssid[6];
