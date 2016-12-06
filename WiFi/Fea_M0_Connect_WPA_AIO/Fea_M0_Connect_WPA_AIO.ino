@@ -3,8 +3,9 @@
  * 
  * Connection of Feather M0 to AdaFruit IO for logging using MQTT
  * written (synthesized) by drm 20160926
+ * V1.1 Made times defined parameters
  */
- const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.0-20160926 ";
+const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.1-20161120 ";
 #include <drmLib.h>
 
 #include "config.h"
@@ -14,7 +15,7 @@ AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 // Set up the AIO feeds
 AdafruitIO_Feed *volts = aio.feed("volts");
 AdafruitIO_Feed *secs = aio.feed("secs");
-AdafruitIO_Feed *sout_buf = aio.feed("sout_buf");
+// AdafruitIO_Feed *sout_buf = aio.feed("sout_buf");
 
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 float batt_volts;
@@ -106,9 +107,9 @@ void loop()
       Serial.println(serPrt); 
     }
   }
-  int delay_sec = 15;
-  if((millis()-millis_start)/1000 > 120) delay_sec = 300;
-  if(last_run_secs + delay_sec < (millis()-millis_start)/1000) 
+  int delay_sec = INITIAL_INTERVAL_SECS;
+  if((millis()-millis_start)/1000 > INITIAL_SECS) delay_sec = INTERVAL_SECS;
+  if(last_run_secs + delay_sec < (millis()-millis_start)/1000)
   {
     aio.run();
     last_run_secs = (millis()-millis_start)/1000;
@@ -116,7 +117,7 @@ void loop()
     printWifiData();    
     secs->save(last_run_secs);
     volts->save(batt_volts);
-    sout_buf->save(serial_wrt_free);
+    // sout_buf->save(serial_wrt_free);
   }
   // WiFi.maxLowPowerMode();
   WiFi.lowPowerMode();

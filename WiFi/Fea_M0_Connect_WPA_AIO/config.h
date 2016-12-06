@@ -15,6 +15,9 @@
 #define LED           13
 #define BATT          A7
 #define BAT_AVG_CNT   4
+#define INITIAL_SECS 300
+#define INITIAL_INTERVAL_SECS 10
+#define INTERVAL_SECS 60
 
 // The lines included below are authentication information and are not in GitHub
 #include "C:\drm\PrivCode\WiFi_auth.h"
