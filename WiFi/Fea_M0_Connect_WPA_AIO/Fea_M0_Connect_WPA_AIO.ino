@@ -13,8 +13,8 @@ const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.1-20161120 ";
 AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 
 // Set up the AIO feeds
-AdafruitIO_Feed *volts = aio.feed("volts");
-AdafruitIO_Feed *secs = aio.feed("secs");
+AdafruitIO_Feed *volts = aio.feed("voltsgrn2");
+AdafruitIO_Feed *secs = aio.feed("secsgrn2");
 // AdafruitIO_Feed *sout_buf = aio.feed("sout_buf");
 
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
