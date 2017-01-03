@@ -6,13 +6,18 @@
  * V1.1 Made times defined parameters
  * V1.2 extra low power mode appears to cause problems, trying to get timing right
  */
+
 const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.2-20170101 ";
 #include <drmLib.h>
 
 #include "config.h"
 
-AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
+//------ The items below are defined in the WiFi_auth.h include file
+// WIFI_SSID       WIFI_PASS       
+//------ The items below are defined in the Adafruit_IO_auth.h include file
+// AIO_USERNAME    AIO_KEY
 
+AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 // Set up the AIO feeds
 // AdafruitIO_Feed *volts = aio.feed("voltsblue1");
 // AdafruitIO_Feed *secs = aio.feed("secsblue1");
@@ -46,13 +51,14 @@ void setup()
 
   if(serPrt) Serial.print("Connecting to Adafruit IO");
 
+
   // connect to io.adafruit.com
   aio.connect();
 
   // wait for a connection
   while(aio.status() < AIO_CONNECTED) 
   {
-    if(serPrt) Serial.print(".");
+    Serial.print(".");
     delay(500);
   }
 
@@ -92,15 +98,43 @@ void loop()
   }
   // WiFi.maxLowPowerMode();
   loop_run_time = millis();
+
 }
 
 void printCurrentNet() 
 {
+  // print the SSID of the network you're attached to:
+  if(serPrt) Serial.println();
+  if(serPrt) Serial.println();
+  if(serPrt) Serial.print("SSID: ");
+  if(serPrt) Serial.println(WiFi.SSID());
+
+  // Print run time
+  if(serPrt) Serial.print("Running: ");
+  if(serPrt) Serial.println((millis() - millis_start)/1000);
+  
+  // Get voltage, store in global and print
+  if(serPrt) Serial.print("Volts: ");
   batt_volts = read_batt();
   byte bssid[6];
   WiFi.BSSID(bssid);
+  if(serPrt) Serial.print("BSSID: ");
+  if(serPrt) Serial.print(bssid[5], HEX);
+  if(serPrt) Serial.print(":");
+  if(serPrt) Serial.print(bssid[4], HEX);
+  if(serPrt) Serial.print(":");
+  if(serPrt) Serial.print(bssid[3], HEX);
+  if(serPrt) Serial.print(":");
+  if(serPrt) Serial.print(bssid[2], HEX);
+  if(serPrt) Serial.print(":");
+  if(serPrt) Serial.print(bssid[1], HEX);
+  if(serPrt) Serial.print(":");
+  if(serPrt) Serial.println(bssid[0], HEX);
+
+  // print the received signal strength:
   long rssi = WiFi.RSSI();
-  byte encryption = WiFi.encryptionType();
+  if(serPrt) Serial.print("signal strength (RSSI):");
+  if(serPrt) Serial.println(rssi);
 
   if(serPrt)
   {
@@ -217,4 +251,3 @@ void WiFiConnect()
   // you're connected now
   if(serPrt) Serial.print("You're connected to the network");
 }
-
