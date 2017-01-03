@@ -3,8 +3,11 @@
  * 
  * Connection of Feather M0 to AdaFruit IO for logging using MQTT
  * written (synthesized) by drm 20160926
+ * V1.1 Made times defined parameters
+ * V1.2 extra low power mode appears to cause problems, trying to get timing right
  */
-const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.0-20160926 ";
+
+const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.2-20170101 ";
 #include <drmLib.h>
 
 #include "config.h"
@@ -16,22 +19,24 @@ const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.0-20160926 ";
 
 AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 // Set up the AIO feeds
-AdafruitIO_Feed *volts = aio.feed("volts");
-AdafruitIO_Feed *secs = aio.feed("secs");
-AdafruitIO_Feed *sout_buf = aio.feed("sout_buf");
+// AdafruitIO_Feed *volts = aio.feed("voltsblue1");
+// AdafruitIO_Feed *secs = aio.feed("secsblue1");
+AdafruitIO_Feed *volts = aio.feed("voltsgrn2");
+AdafruitIO_Feed *secs = aio.feed("secsgrn2");
+// AdafruitIO_Feed *volts = aio.feed("voltsred3");
+// AdafruitIO_Feed *secs = aio.feed("secsred3");
 
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 float batt_volts;
-int serial_wrt_free;
-long millis_start;
+unsigned long millis_start;
+unsigned int loop_run_time = 0;
 unsigned long last_run_secs = 0;
-boolean serPrt = false; // true;
+boolean serPrt = true;
+// boolean serPrt = false;
 
-void setup() 
+void setup()
 {
   millis_start = millis();
-  WiFi.setPins(8,7,4,2);  // Configure Feather M0 WiFi Pins
-  //Initialize serial and wait for port to open:
 
   // initialize digital pin (LED) 13 as an output and the battery level as analog input
   analogReadResolution(12);
@@ -39,48 +44,13 @@ void setup()
   pinMode(BATT, INPUT); // Battery level adc input
   
   Serial.begin(115200);
-  delay(1000);
-  while (!Serial) 
-  {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  delay(3000);
   drmStartPrint(code_version);
 
-  // check for the presence of the shield:
-  if (WiFi.status() == WL_NO_SHIELD) 
-  {
-    Serial.println("WiFi shield not present-spinning");
-    // don't continue:
-    while (true);
-  }
+  WiFiConnect();
 
-  String fv = WiFi.firmwareVersion();
-  Serial.print("Firmware Version-> "); Serial.println(fv);
-  if (fv != "19.4.4") 
-  {
-    Serial.println("Please upgrade the firmware");
-  }
+  if(serPrt) Serial.print("Connecting to Adafruit IO");
 
-  // attempt to connect to Wifi network:
-  while (status != WL_CONNECTED) 
-  {
-    Serial.print("Attempting to connect to WPA SSID: ");
-    Serial.println(ssid);
-    // Connect to WPA/WPA2 network:
-    if (pass == "")
-      status = WiFi.begin(ssid);
-    else
-      status = WiFi.begin(ssid, pass);
-
-    // wait 5 seconds for connection:
-    delay(5000);
-  }
-  // you're connected now, so print out the data:
-  Serial.print("You're connected to the network");
-  printCurrentNet();
-  printWifiData();
-
-  Serial.print("Connecting to Adafruit IO");
 
   // connect to io.adafruit.com
   aio.connect();
@@ -91,10 +61,16 @@ void setup()
     Serial.print(".");
     delay(500);
   }
+
+  // we are connected
+  if(serPrt) Serial.println();
+  if(serPrt) Serial.print("AdaFruit IO Connection Sucess-> ");
+  if(serPrt) Serial.println(aio.statusText());
 }
 
 void loop() 
 {
+  loop_run_time = millis();
   if(Serial.available())
   {
     char c = Serial.read();
@@ -105,39 +81,24 @@ void loop()
       Serial.println(serPrt); 
     }
   }
-  int delay_sec = 15;
-  if((millis()-millis_start)/1000 > 120) delay_sec = 300;
-  if(last_run_secs + delay_sec < (millis()-millis_start)/1000) 
+  if(WiFi.status() != WL_CONNECTED)   WiFiConnect();
+  int delay_sec = INITIAL_INTERVAL_SECS;
+  if((millis()-millis_start)/1000 > INITIAL_SECS) delay_sec = INTERVAL_SECS;
+  if(last_run_secs + delay_sec < (millis()-millis_start)/1000)
   {
+    digitalWrite(LED, HIGH);
+    last_run_secs = (loop_run_time-millis_start)/1000;
     aio.run();
-    last_run_secs = (millis()-millis_start)/1000;
+    
     printCurrentNet();
     printWifiData();    
     secs->save(last_run_secs);
     volts->save(batt_volts);
-    sout_buf->save(serial_wrt_free);
+    digitalWrite(LED, LOW);
   }
   // WiFi.maxLowPowerMode();
-  WiFi.lowPowerMode();
-}
+  loop_run_time = millis();
 
-void printWifiData() 
-{
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  if(serPrt) Serial.print("IP Address: ");
-  if(serPrt) Serial.println(ip);
-
-  // print your MAC address:
-  byte mac[6];
-  int i;
-  WiFi.macAddress(mac);
-  if(serPrt) Serial.print("MAC address: ");
-  for(i=5; i>=0; i--)
-  {
-    if(serPrt) Serial.print(mac[i], HEX);
-    if (i!=0) if(serPrt) Serial.print(":");      
-  }
 }
 
 void printCurrentNet() 
@@ -155,14 +116,6 @@ void printCurrentNet()
   // Get voltage, store in global and print
   if(serPrt) Serial.print("Volts: ");
   batt_volts = read_batt();
-  if(serPrt) Serial.println(batt_volts);
-
-  // Get serial buffer free, store in global and print
-  if(serPrt) Serial.print("WriteFree: ");
-  serial_wrt_free = Serial.availableForWrite();
-  if(serPrt) Serial.println(serial_wrt_free);
-
-  // print the MAC address of the router you're attached to:
   byte bssid[6];
   WiFi.BSSID(bssid);
   if(serPrt) Serial.print("BSSID: ");
@@ -183,12 +136,73 @@ void printCurrentNet()
   if(serPrt) Serial.print("signal strength (RSSI):");
   if(serPrt) Serial.println(rssi);
 
-  // print the encryption type:
-  byte encryption = WiFi.encryptionType();
-  if(serPrt) Serial.print("Encryption Type:");
-  if(serPrt) Serial.println(encryption, HEX);
-  if(serPrt) Serial.println();
+  if(serPrt)
+  {
+    // print the SSID of the network you're attached to:
+    Serial.println();
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+  
+    // Print run time
+    Serial.print("Running: ");
+    Serial.println((millis() - millis_start)/1000);
+    
+    // Get voltage, store in global and print
+    Serial.print("Volts: ");
+    Serial.println(batt_volts);
+  
+    // print the MAC address of the router you're attached to:
+    int i;
+    Serial.print("BSSID: ");
+    if(serPrt) 
+      for(i=5; i>=0; i--)
+      {
+        Serial.print(bssid[i], HEX);
+        if (i!=0) Serial.print(":");
+      }
+  
+    // print the received signal strength:
+    Serial.print("signal strength (RSSI): ");
+    Serial.println(rssi);
+  
+    // print the encryption type:
+    Serial.print("Encryption Type: ");
+    Serial.println(encryption, HEX);
+    Serial.print("Status: ");
+    Serial.println(WiFi.status());
+  }
 }
+
+void printWifiData()
+{
+  // get data from WIFi
+  byte mac[6];
+  WiFi.macAddress(mac);
+  IPAddress ip = WiFi.localIP();
+  unsigned long unixtime = WiFi.getTime();
+  unsigned long unixyear = unixtime/(60*60*24);
+  unixyear = ((float) unixyear)/365.2422; // from JPL web paper by Evan M Manning
+  
+  // print your WiFi shield's IP and MAC addresses
+  if(serPrt)
+  {
+    Serial.print("Unix Time: ");
+    Serial.println(unixtime);
+    Serial.print("Unix year: ");
+    Serial.println(unixyear);
+    Serial.print("IP Address: ");
+    Serial.println(ip);
+    Serial.print("MAC address: ");
+    int i;
+    for(i=5; i>=0; i--)
+    {
+      Serial.print(mac[i], HEX);
+      if (i!=0) Serial.print(":");      
+      else Serial.println();      
+    }
+  }
+}
+
 
 float read_batt()
 {
@@ -202,3 +216,38 @@ float read_batt()
   return(val);
 }
 
+void WiFiConnect()
+{
+  
+  WiFi.setPins(8,7,4,2);  // Configure Feather M0 WiFi Pins
+  // check for the presence of the shield:
+  if (WiFi.status() == WL_NO_SHIELD) 
+  {
+    if(serPrt) Serial.println("WiFi shield not present");
+    // don't continue:
+    while (true);
+  }
+
+  String fv = WiFi.firmwareVersion();
+  if(serPrt) Serial.print("Firmware Version-> "); if(serPrt) Serial.println(fv);
+  if (fv != "19.4.4") 
+  {
+    if(serPrt) Serial.println("Please upgrade the firmware");
+  }
+
+  // attempt to connect to Wifi network:
+  WiFi.disconnect();
+  delay(3000);
+  while (status != WL_CONNECTED) 
+  {
+    if(serPrt) Serial.print("Attempting to connect to WPA SSID: ");
+    if(serPrt) Serial.println(ssid);
+    // Connect to WPA/WPA2 network:
+    status = WiFi.begin(ssid, pass);
+
+    // wait 3 seconds for connection:
+    delay(3000);
+  }
+  // you're connected now
+  if(serPrt) Serial.print("You're connected to the network");
+}

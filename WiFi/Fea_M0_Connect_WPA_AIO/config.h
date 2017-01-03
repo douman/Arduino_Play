@@ -17,7 +17,10 @@
 
 #define LED           13
 #define BATT          A7
-#define BAT_AVG_CNT   4
+#define BAT_AVG_CNT   100
+#define INITIAL_SECS 300
+#define INITIAL_INTERVAL_SECS 10
+#define INTERVAL_SECS 60
 
 void printCurrentNet();
 void printWifiData();
