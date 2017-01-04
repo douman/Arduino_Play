@@ -19,10 +19,10 @@ const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.2-20170101 ";
 
 AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 // Set up the AIO feeds
-// AdafruitIO_Feed *volts = aio.feed("voltsblue1");
-// AdafruitIO_Feed *secs = aio.feed("secsblue1");
-AdafruitIO_Feed *volts = aio.feed("voltsgrn2");
-AdafruitIO_Feed *secs = aio.feed("secsgrn2");
+AdafruitIO_Feed *volts = aio.feed("voltsblue1");
+AdafruitIO_Feed *secs = aio.feed("secsblue1");
+// AdafruitIO_Feed *volts = aio.feed("voltsgrn2");
+// AdafruitIO_Feed *secs = aio.feed("secsgrn2");
 // AdafruitIO_Feed *volts = aio.feed("voltsred3");
 // AdafruitIO_Feed *secs = aio.feed("secsred3");
 
@@ -118,23 +118,29 @@ void printCurrentNet()
   batt_volts = read_batt();
   byte bssid[6];
   WiFi.BSSID(bssid);
-  if(serPrt) Serial.print("BSSID: ");
-  if(serPrt) Serial.print(bssid[5], HEX);
-  if(serPrt) Serial.print(":");
-  if(serPrt) Serial.print(bssid[4], HEX);
-  if(serPrt) Serial.print(":");
-  if(serPrt) Serial.print(bssid[3], HEX);
-  if(serPrt) Serial.print(":");
-  if(serPrt) Serial.print(bssid[2], HEX);
-  if(serPrt) Serial.print(":");
-  if(serPrt) Serial.print(bssid[1], HEX);
-  if(serPrt) Serial.print(":");
-  if(serPrt) Serial.println(bssid[0], HEX);
+  if(serPrt)
+  {
+    Serial.print("BSSID: ");
+    Serial.print(bssid[5], HEX);
+    Serial.print(":");
+    Serial.print(bssid[4], HEX);
+    Serial.print(":");
+    Serial.print(bssid[3], HEX);
+    Serial.print(":");
+    Serial.print(bssid[2], HEX);
+    Serial.print(":");
+    Serial.print(bssid[1], HEX);
+    Serial.print(":");
+    Serial.println(bssid[0], HEX);
+  }
 
-  // print the received signal strength:
+  // print the received signal strength and encryption
   long rssi = WiFi.RSSI();
-  if(serPrt) Serial.print("signal strength (RSSI):");
-  if(serPrt) Serial.println(rssi);
+  if(serPrt)
+  {
+    Serial.print("signal strength (RSSI):");
+    Serial.println(rssi);
+  }
 
   if(serPrt)
   {
@@ -154,18 +160,19 @@ void printCurrentNet()
     // print the MAC address of the router you're attached to:
     int i;
     Serial.print("BSSID: ");
-    if(serPrt) 
-      for(i=5; i>=0; i--)
-      {
-        Serial.print(bssid[i], HEX);
-        if (i!=0) Serial.print(":");
-      }
+    for(i=5; i>=0; i--)
+    {
+      Serial.print(bssid[i], HEX);
+      if (i!=0) Serial.print(":");
+      else Serial.println();
+    }
   
     // print the received signal strength:
     Serial.print("signal strength (RSSI): ");
     Serial.println(rssi);
   
     // print the encryption type:
+    byte encryption = WiFi.encryptionType();
     Serial.print("Encryption Type: ");
     Serial.println(encryption, HEX);
     Serial.print("Status: ");
