@@ -3,9 +3,9 @@
   Created by drm 20151213
   History
   -------
-  V2.0 --> adding RTC routines to this library, did not work (see comments)
+  V2.0 --> trying to add RTC routines to this library, did not work (see comments)
   V2.1 --> ifdef(ing) for M0 cases
-  V2.2 --> more on SAM serialno
+  V2.2 --> moved some samM0 stuff into library
 */
 
 #include "drmLib.h"
@@ -22,35 +22,24 @@ unsigned short drmSerialNo()
 #if defined(ARDUINO_ARCH_SAM) || defined(ARDUINO_ARCH_SAMD) // This is the 128 bit serial number for M0, XOR the bits into a short
   unsigned short serial_xor=0;
   int i;
-  unsigned short *serial_no= (unsigned short *) 0x0080A00C;
-  for(i=0; i<8; i++) serial_xor ^= *serial_no++;
+  unsigned short *M0SER= (unsigned short *) 0x0080A00C;
+  for(i=0; i<8; i++) serial_xor ^= *M0SER++;
   return(serial_xor); // no EEPROM on M0 MCU
 #else
   return(EEPROM.read(5) << 8 | EEPROM.read(6)); // combine two bytes into in serial number (drm specific)
 #endif
 }
 
-// new proc 20160902
-char * drmSAMSerialNo(char *outbuf, buflen)
-{
-	if(buflen == 0 || outbuf == NULL)
-	{
-		outbuf = new String(20);
-	}
-	long s[4], *ser;
-  ser = (long *) 0x0080A00C; // address of the processor serial number
-  int i;
-  for (i=3; i>=0; i--) s[i] = *ser++;
-  for(i=0; i<4; i++) Serial.print(s[i], HEX);
-}
-
-
 // Printout the standard drm Arduino start message
 void drmStartPrint(const char *drmversion) 
 {
-  Serial.print(drmversion); 
-  Serial.print(F(" SN#"));
+  Serial.println(drmversion); 
+  Serial.print(F("%SN\t"));
+#if defined(ARDUINO_ARCH_SAM) || defined(ARDUINO_ARCH_SAMD) // This is the 128 bit serial number for M0, XOR the bits into a short
+  print_samM0_serial();
+#else
   Serial.println(drmSerialNo());
+#endif
   Serial.print(F("Compiled-> "));
   Serial.print(F(__DATE__)); 
   Serial.print(F(" "));
@@ -86,6 +75,32 @@ void printTime(unsigned long diff)
   if(diff/ms_sec<10) Serial.print("0");
   Serial.print(diff/ms_sec); Serial.print(" \t");
 }
+
+float read_samM0_batt()
+{
+  // Get and print Battery voltage at beginning of GPS sentence
+  float val=0;
+  int i;
+  for(i=0; i<BAT_AVG_CNT; i++) val += analogRead(SAMM0_BATT);
+  val = val/(float)BAT_AVG_CNT;
+  // val = (val * (2*3.3))/1024; // at lower ADC resolution (10 bit)
+  val = (val * (2*3.3))/4096; // 12 bit ADC resolution
+  return(val);
+}
+
+// print out the SAMD processor serial number
+void print_samM0_serial()
+{
+  long s[4], *M0SER;
+  M0SER = (long *) 0x0080A00C; // address of the processor serial number
+  int i;
+  for (i=3; i>=0; i--) s[i] = *M0SER++;
+
+  for(i=0; i<4; i++) Serial.print(s[i], HEX);
+  Serial.print("/");
+  Serial.println(drmSerialNo());
+}
+
 
 /* Save the RTC stuff for later
 // Initialize RTC module for reading

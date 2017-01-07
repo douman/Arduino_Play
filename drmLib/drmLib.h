@@ -5,11 +5,11 @@
   V1.0 --> First with EEPROM access and start print
   V2.0 --> adding RTC access
   V2.1 --> ifdef(ing) for M0 cases
-  V2.2 --> more on SAM serialno
+  V2.2 --> moved some samM0 stuff into the library and did long serial numbers 20170104
 */
 #ifndef drmLib_h
 #define drmLib_h
-#define drmLibVer "drmLib V2.2 -- 20160902"
+#define drmLibVer "drmLib V2.1 -- 20160603"
 
 
 #if !defined(ARDUINO_ARCH_SAM) && !defined(ARDUINO_ARCH_SAMD) && !defined(ESP8266) && !defined(ARDUINO_ARCH_STM32F2)
@@ -20,6 +20,8 @@
   #include <EEPROM.h>    // AVR on chip EEPROM 
 #endif
 
+#define BAT_AVG_CNT 4
+#define SAMM0_BATT          A7
 
 #include "Arduino.h"
 #include <Wire.h>      // I2C and SPI
@@ -48,7 +50,6 @@ enum rtc_type
 	DS3231,
 	OTHER
 }
- */
 
 typedef struct parseTime {
   unsigned long lsec;
@@ -64,15 +65,16 @@ typedef struct parseTime {
   byte csr;
   byte sr;
 };
-struct parseTime time_struct[1];
+*/
 
 // Routines in this Library
 int drmBcd2Dec(int inbyte);
 unsigned short drmSerialNo();
-char * drmSAMSerialNo(); // New 20160902
 void drmStartPrint(const char *drmversion);
 void drmPrtLead0(long in, int places);
 void printTime(unsigned long milli_time);
+float read_samM0_batt();
+void print_samM0_serial();
 
 /* Save the RTC for later
 int initRTC(rtc_type type);
