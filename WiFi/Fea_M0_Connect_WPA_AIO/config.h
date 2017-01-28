@@ -20,7 +20,7 @@
 #define BAT_AVG_CNT   100
 #define INITIAL_SECS 300
 #define INITIAL_INTERVAL_SECS 10
-#define INTERVAL_SECS 60
+#define INTERVAL_SECS 300
 
 void printCurrentNet();
 void printWifiData();

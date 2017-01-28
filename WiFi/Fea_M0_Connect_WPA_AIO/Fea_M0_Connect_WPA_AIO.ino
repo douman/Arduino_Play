@@ -5,9 +5,11 @@
  * written (synthesized) by drm 20160926
  * V1.1 Made times defined parameters
  * V1.2 extra low power mode appears to cause problems, trying to get timing right
+ * V1.3 some unknown change
+ * V1.4 changed 'S' command behavior, now will print after s command
  */
 
-const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.2-20170101 ";
+const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.4-20170126 ";
 #include <drmLib.h>
 
 #include "config.h"
@@ -19,19 +21,19 @@ const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.2-20170101 ";
 
 AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 // Set up the AIO feeds
-AdafruitIO_Feed *volts = aio.feed("voltsblue1");
-AdafruitIO_Feed *secs = aio.feed("secsblue1");
+AdafruitIO_Feed *volts = aio.feed("vb1");
+AdafruitIO_Feed *secs = aio.feed("sb1");
 // AdafruitIO_Feed *volts = aio.feed("voltsgrn2");
 // AdafruitIO_Feed *secs = aio.feed("secsgrn2");
-// AdafruitIO_Feed *volts = aio.feed("voltsred3");
-// AdafruitIO_Feed *secs = aio.feed("secsred3");
+// AdafruitIO_Feed *volts = aio.feed("vr3");
+// AdafruitIO_Feed *secs = aio.feed("sr3");
 
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 float batt_volts;
 unsigned long millis_start;
 unsigned int loop_run_time = 0;
 unsigned long last_run_secs = 0;
-boolean serPrt = true;
+boolean serPrt = true, printNext=false;
 // boolean serPrt = false;
 
 void setup()
@@ -76,7 +78,8 @@ void loop()
     char c = Serial.read();
     if(c == 'S' || c == 's') 
     { 
-      serPrt = !serPrt; 
+      serPrt = !serPrt;
+      printNext = !printNext;
       Serial.print("# SER swap "); 
       Serial.println(serPrt); 
     }
@@ -84,8 +87,9 @@ void loop()
   if(WiFi.status() != WL_CONNECTED)   WiFiConnect();
   int delay_sec = INITIAL_INTERVAL_SECS;
   if((millis()-millis_start)/1000 > INITIAL_SECS) delay_sec = INTERVAL_SECS;
-  if(last_run_secs + delay_sec < (millis()-millis_start)/1000)
+  if((last_run_secs + delay_sec < (millis()-millis_start)/1000) || printNext)
   {
+    printNext = false;
     digitalWrite(LED, HIGH);
     last_run_secs = (loop_run_time-millis_start)/1000;
     aio.run();
@@ -96,43 +100,29 @@ void loop()
     volts->save(batt_volts);
     digitalWrite(LED, LOW);
   }
-  // WiFi.maxLowPowerMode();
+  WiFi.lowPowerMode(); // Appears to cause disconnect problems
+  // WiFi.maxLowPowerMode(); // Appears to cause disconnect problems
   loop_run_time = millis();
 
 }
 
 void printCurrentNet() 
 {
-  // print the SSID of the network you're attached to:
-  if(serPrt) Serial.println();
-  if(serPrt) Serial.println();
-  if(serPrt) Serial.print("SSID: ");
-  if(serPrt) Serial.println(WiFi.SSID());
-
-  // Print run time
-  if(serPrt) Serial.print("Running: ");
-  if(serPrt) Serial.println((millis() - millis_start)/1000);
-  
+//  // print the SSID of the network you're attached to:
+//  if(serPrt) Serial.println();
+//  if(serPrt) Serial.println();
+//  if(serPrt) Serial.print("SSID: ");
+//  if(serPrt) Serial.println(WiFi.SSID());
+//
+//  // Print run time
+//  if(serPrt) Serial.print("Running: ");
+//  if(serPrt) Serial.println((millis() - millis_start)/1000);
+//  
   // Get voltage, store in global and print
   if(serPrt) Serial.print("Volts: ");
   batt_volts = read_batt();
   byte bssid[6];
   WiFi.BSSID(bssid);
-  if(serPrt)
-  {
-    Serial.print("BSSID: ");
-    Serial.print(bssid[5], HEX);
-    Serial.print(":");
-    Serial.print(bssid[4], HEX);
-    Serial.print(":");
-    Serial.print(bssid[3], HEX);
-    Serial.print(":");
-    Serial.print(bssid[2], HEX);
-    Serial.print(":");
-    Serial.print(bssid[1], HEX);
-    Serial.print(":");
-    Serial.println(bssid[0], HEX);
-  }
 
   // print the received signal strength and encryption
   long rssi = WiFi.RSSI();
@@ -225,7 +215,6 @@ float read_batt()
 
 void WiFiConnect()
 {
-  
   WiFi.setPins(8,7,4,2);  // Configure Feather M0 WiFi Pins
   // check for the presence of the shield:
   if (WiFi.status() == WL_NO_SHIELD) 
