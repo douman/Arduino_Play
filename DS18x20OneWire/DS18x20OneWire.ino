@@ -12,9 +12,14 @@ const char *code_version="DS18x20OneWire -> V1.04-20170331";
 #define POWERPIN 5
 #define GNDPIN 7
 #define DATAPIN 6
+#define LASER 12
+#define PIRIN A0
 
 OneWire  ds(DATAPIN);  // on pin DATAPIN (a 4.7K resistor is necessary)
 unsigned long icnt;
+
+
+//-------------------
 void setup(void) {
   icnt = 0;
   Serial.begin(115200);
@@ -24,11 +29,16 @@ void setup(void) {
   pinMode     (POWERPIN, OUTPUT);
   digitalWrite(POWERPIN, HIGH);
   pinMode     (DATAPIN, INPUT_PULLUP);
+  pinMode     (LASER, OUTPUT);
+  digitalWrite(LASER, LOW);
+  pinMode     (PIRIN, INPUT);
+  analogReference(INTERNAL);
 
   // pinMode(5, INPUT);
   drmStartPrint(code_version);
 }
 
+//------------------
 void loop(void) {
   byte i;
   byte present = 0;
@@ -36,44 +46,47 @@ void loop(void) {
   byte data[12];
   byte addr[8];
   float celsius, fahrenheit;
-  Serial.print(icnt++); Serial.print(" - ");
+  Serial.print(icnt++); Serial.print("- ");
   
   if ( !ds.search(addr)) {
     Serial.println("No more addresses.");
-    Serial.println();
+    //Serial.println();
     ds.reset_search();
+    digitalWrite(LASER, HIGH);
     delay(250);
+    digitalWrite(LASER, LOW);
     return;
   }
   
-  Serial.print("ROM =");
+  Serial.print(" R=");
   for( i = 0; i < 8; i++) {
     Serial.write(' ');
-    Serial.print(addr[i], HEX);
+    //Serial.print(addr[i], HEX);
+    drmPrtLead0Hex(addr[i]);
   }
 
   if (OneWire::crc8(addr, 7) != addr[7]) {
       Serial.println("CRC is not valid!");
       return;
   }
-  Serial.println();
+  //Serial.println();
  
   // the first ROM byte indicates which chip
   switch (addr[0]) {
     case 0x10:
-      Serial.println("  Chip = DS18S20");  // or old DS1820
+      Serial.print(" DS18S20");  // or old DS1820
       type_s = 1;
       break;
     case 0x28:
-      Serial.println("  Chip = DS18B20");
+      Serial.print(" DS18B20");
       type_s = 0;
       break;
     case 0x22:
-      Serial.println("  Chip = DS1822");
+      Serial.print(" DS1822");
       type_s = 0;
       break;
     default:
-      Serial.println("Device is not a DS18x20 family device.");
+      Serial.print("Device is not a DS18x20 family device.");
       return;
   } 
 
@@ -81,24 +94,30 @@ void loop(void) {
   ds.select(addr);
   ds.write(0x44, 1);        // start conversion, with parasite power on at the end
   
-  delay(1000);     // maybe 750ms is enough, maybe not
+  digitalWrite(LASER, HIGH);
+  delay(100);
+  int pirvolts = analogRead(PIRIN);
+//  Serial.print(" PIR-> "); Serial.print(pirvolts); Serial.print(" ");
+  if(pirvolts > 256) digitalWrite(LASER, LOW);
+  delay(800);     // maybe 750ms is enough, maybe not
   // we might do a ds.depower() here, but the reset will take care of it.
   
   present = ds.reset();
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
 
-  Serial.print("  Data = ");
+  Serial.print(" Data= ");
   Serial.print(present, HEX);
   Serial.print(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds.read();
-    Serial.print(data[i], HEX);
+    //Serial.print(data[i], HEX);
+    drmPrtLead0Hex(data[i]);
     Serial.print(" ");
   }
   Serial.print(" CRC=");
-  Serial.print(OneWire::crc8(data, 8), HEX);
-  Serial.println();
+  drmPrtLead0Hex(OneWire::crc8(data, 8));
+  Serial.print(" --");
 
   // Convert the data to actual temperature
   // because the result is a 16 bit signed integer, it should
@@ -121,9 +140,9 @@ void loop(void) {
   }
   celsius = (float)raw / 16.0;
   fahrenheit = celsius * 1.8 + 32.0;
-  Serial.print("  Temperature = ");
+  Serial.print(" Temp= ");
   Serial.print(celsius);
-  Serial.print(" Celsius, ");
+  Serial.print(" C, ");
   Serial.print(fahrenheit);
-  Serial.println(" Fahrenheit");
+  Serial.println(" F");
 }

@@ -6,10 +6,11 @@
   V2.0 --> adding RTC access
   V2.1 --> ifdef(ing) for M0 cases
   V2.2 --> moved some samM0 stuff into the library and did long serial numbers 20170104
+  V2.2.1 --> added drmPrtLead0Hex 20170725drm
 */
 #ifndef drmLib_h
 #define drmLib_h
-#define drmLibVer "drmLib V2.1 -- 20160603"
+#define drmLibVer "drmLib V2.2.1 -- 20160603"
 
 
 #if !defined(ARDUINO_ARCH_SAM) && !defined(ARDUINO_ARCH_SAMD) && !defined(ESP8266) && !defined(ARDUINO_ARCH_STM32F2)
@@ -72,6 +73,7 @@ int drmBcd2Dec(int inbyte);
 unsigned short drmSerialNo();
 void drmStartPrint(const char *drmversion);
 void drmPrtLead0(long in, int places);
+byte drmPrtLead0Hex(byte in);
 void printTime(unsigned long milli_time);
 float read_samM0_batt();
 void print_samM0_serial();

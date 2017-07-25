@@ -21,10 +21,10 @@ const char *code_version="Fea_M0_Connect_WPA_AIO -> V1.4-20170126 ";
 
 AdafruitIO_WiFi aio(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
 // Set up the AIO feeds
-// AdafruitIO_Feed *volts = aio.feed("vb1");
-// AdafruitIO_Feed *secs = aio.feed("sb1");
-AdafruitIO_Feed *volts = aio.feed("vg2");
-AdafruitIO_Feed *secs = aio.feed("sg2");
+AdafruitIO_Feed *volts = aio.feed("vb1");
+AdafruitIO_Feed *secs = aio.feed("sb1");
+// AdafruitIO_Feed *volts = aio.feed("vg2");
+// AdafruitIO_Feed *secs = aio.feed("sg2");
 // AdafruitIO_Feed *volts = aio.feed("vr3");
 // AdafruitIO_Feed *secs = aio.feed("sr3");
 
@@ -245,5 +245,5 @@ void WiFiConnect()
     delay(3000);
   }
   // you're connected now
-  if(serPrt) Serial.print("You're connected to the network");
+  if(serPrt) Serial.print("You're connected to the network\n");
 }

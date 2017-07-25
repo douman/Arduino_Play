@@ -6,6 +6,7 @@
   V2.0 --> trying to add RTC routines to this library, did not work (see comments)
   V2.1 --> ifdef(ing) for M0 cases
   V2.2 --> moved some samM0 stuff into library
+  V2.2.1 --> added drmPrtLead0Hex 20170725drm
 */
 
 #include "drmLib.h"
@@ -55,6 +56,13 @@ void drmPrtLead0(long in, int places)
   char out_str[11];
   sprintf(out_str, "%ld", in);
   Serial.print((out_str+(10-places)));
+}
+
+// Print a byte with leading zero as HEX
+byte drmPrtLead0Hex(byte in) 
+{
+  Serial.print((in & 0xF0) >> 4, HEX);
+  Serial.print( in & 0x0F, HEX);
 }
 
 // Print out a formatted elapsed time given the millisecond timer value
