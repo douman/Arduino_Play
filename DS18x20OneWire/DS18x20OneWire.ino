@@ -14,9 +14,10 @@ const char *code_version="DS18x20OneWire -> V1.04-20170331";
 #define DATAPIN 6
 #define LASER 12
 #define PIRIN A0
+#define ALARM_MS 20000
 
 OneWire  ds(DATAPIN);  // on pin DATAPIN (a 4.7K resistor is necessary)
-unsigned long icnt;
+unsigned long icnt, laser_ontime = 0;
 
 
 //-------------------
@@ -48,29 +49,26 @@ void loop(void) {
   float celsius, fahrenheit;
   Serial.print(icnt++); Serial.print("- ");
   
-  if ( !ds.search(addr)) {
+  if ( !ds.search(addr)) 
+  {
     Serial.println("No more addresses.");
-    //Serial.println();
     ds.reset_search();
-    digitalWrite(LASER, HIGH);
-    delay(250);
-    digitalWrite(LASER, LOW);
     return;
   }
   
   Serial.print(" R=");
-  for( i = 0; i < 8; i++) {
+  for( i = 0; i < 8; i++) 
+  {
     Serial.write(' ');
-    //Serial.print(addr[i], HEX);
     drmPrtLead0Hex(addr[i]);
   }
 
-  if (OneWire::crc8(addr, 7) != addr[7]) {
+  if (OneWire::crc8(addr, 7) != addr[7]) 
+  {
       Serial.println("CRC is not valid!");
       return;
   }
-  //Serial.println();
- 
+  
   // the first ROM byte indicates which chip
   switch (addr[0]) {
     case 0x10:
@@ -94,13 +92,21 @@ void loop(void) {
   ds.select(addr);
   ds.write(0x44, 1);        // start conversion, with parasite power on at the end
   
-  digitalWrite(LASER, HIGH);
-  delay(100);
+  delay(800);
+  pinMode(PIRIN, INPUT);
+  int pirstate = digitalRead(PIRIN);
   int pirvolts = analogRead(PIRIN);
-//  Serial.print(" PIR-> "); Serial.print(pirvolts); Serial.print(" ");
-  if(pirvolts > 256) digitalWrite(LASER, LOW);
-  delay(800);     // maybe 750ms is enough, maybe not
-  // we might do a ds.depower() here, but the reset will take care of it.
+  unsigned long nowtime = millis();
+  //Serial.println(""); Serial.print(" PIR-> "); Serial.print(pirvolts); Serial.print(" "); Serial.print(pirstate); Serial.print(" / "); Serial.println((long) (nowtime - laser_ontime));
+  // if(pirvolts > 256) 
+  if (pirstate)
+  {
+    digitalWrite(LASER, HIGH);
+    laser_ontime = nowtime;
+  }
+  long time_diff = laser_ontime - nowtime;
+  if(abs(time_diff) > ALARM_MS) digitalWrite(LASER, LOW);
+  //Serial.println((long) abs(time_diff));
   
   present = ds.reset();
   ds.select(addr);    
