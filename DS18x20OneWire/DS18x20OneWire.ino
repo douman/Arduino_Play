@@ -1,6 +1,7 @@
 const char *code_version="DS18x20OneWire -> V1.04-20170331";
 #include <OneWire.h>
 #include <drmLib.h>
+#include "DS18x20OneWire.h"
 
 // OneWire DS18S20, DS18B20, DS1822 Temperature Example
 //
@@ -13,11 +14,12 @@ const char *code_version="DS18x20OneWire -> V1.04-20170331";
 #define GNDPIN 7
 #define DATAPIN 6
 #define LASER 12
-#define PIRIN A0
-#define ALARM_MS 20000
+#define PIR_IN 2
+#define ALARM_MS 5000
 
 OneWire  ds(DATAPIN);  // on pin DATAPIN (a 4.7K resistor is necessary)
-unsigned long icnt, laser_ontime = 0;
+unsigned long icnt, laser_ontime = 0, motion_cnt=0;
+boolean laser_state = false;
 
 
 //-------------------
@@ -32,11 +34,28 @@ void setup(void) {
   pinMode     (DATAPIN, INPUT_PULLUP);
   pinMode     (LASER, OUTPUT);
   digitalWrite(LASER, LOW);
-  pinMode     (PIRIN, INPUT);
+  laser_state = false;
+  pinMode     (PIR_IN, INPUT);
   analogReference(INTERNAL);
 
   // pinMode(5, INPUT);
   drmStartPrint(code_version);
+  
+  byte addr[8];
+  while (ds.search(addr))
+  {
+    ds.reset();
+    ds.select(addr);
+    ds.write(0x4E, 1); // write scratchpad command
+    ds.write(0x00, 1); // alarm low limit
+    ds.write(0x00, 1); // alarm high limit
+    ds.write(0x7f, 1); // config register (set for 12 bit measurments (750 mSec)
+    ds.reset();
+    ds.select(addr);
+    ds.write(0x48, 1); // write scratchpad to EEPROM
+  }
+  ds.reset_search();
+
 }
 
 //------------------
@@ -46,8 +65,12 @@ void loop(void) {
   byte type_s;
   byte data[12];
   byte addr[8];
+  int istat=0;
   float celsius, fahrenheit;
   Serial.print(icnt++); Serial.print("- ");
+
+//  istat = triggerAllDS(ds);
+//  delay(1800); // wait for conversions
   
   if ( !ds.search(addr)) 
   {
@@ -56,7 +79,7 @@ void loop(void) {
     return;
   }
   
-  Serial.print(" R=");
+  Serial.print("R=");
   for( i = 0; i < 8; i++) 
   {
     Serial.write(' ');
@@ -91,28 +114,13 @@ void loop(void) {
   ds.reset();
   ds.select(addr);
   ds.write(0x44, 1);        // start conversion, with parasite power on at the end
-  
   delay(800);
-  pinMode(PIRIN, INPUT);
-  int pirstate = digitalRead(PIRIN);
-  int pirvolts = analogRead(PIRIN);
-  unsigned long nowtime = millis();
-  //Serial.println(""); Serial.print(" PIR-> "); Serial.print(pirvolts); Serial.print(" "); Serial.print(pirstate); Serial.print(" / "); Serial.println((long) (nowtime - laser_ontime));
-  // if(pirvolts > 256) 
-  if (pirstate)
-  {
-    digitalWrite(LASER, HIGH);
-    laser_ontime = nowtime;
-  }
-  long time_diff = laser_ontime - nowtime;
-  if(abs(time_diff) > ALARM_MS) digitalWrite(LASER, LOW);
-  //Serial.println((long) abs(time_diff));
   
   present = ds.reset();
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
 
-  Serial.print(" Data= ");
+  Serial.print(" D= ");
   Serial.print(present, HEX);
   Serial.print(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
@@ -146,9 +154,36 @@ void loop(void) {
   }
   celsius = (float)raw / 16.0;
   fahrenheit = celsius * 1.8 + 32.0;
-  Serial.print(" Temp= ");
+  Serial.print(" T=");
   Serial.print(celsius);
-  Serial.print(" C, ");
+  Serial.print(" C ");
   Serial.print(fahrenheit);
-  Serial.println(" F");
+  Serial.print(" F ");
+  unsigned long mstime = millis();
+  Serial.print(mstime/60000);
+  Serial.print(":");
+  Serial.println((mstime/1000) % 60);
+  
+
+  boolean pirstate = digitalRead(PIR_IN);
+  unsigned long nowtime = millis();
+  if (pirstate)
+  {
+    laser_ontime = nowtime;
+    if (!laser_state)
+    {
+      Serial.print(icnt++); Serial.print("- ");
+      Serial.print("Motion - "); Serial.println(motion_cnt);
+      digitalWrite(LASER, HIGH);
+      laser_state = true;
+    }
+  }
+  long time_diff = laser_ontime - nowtime;
+  if(abs(time_diff) > ALARM_MS && laser_state) 
+  {
+    Serial.print(icnt++); Serial.print("- ");
+    Serial.print("Motion Cleared "); Serial.println(motion_cnt++);
+    digitalWrite(LASER, LOW);
+    laser_state = false;
+  }
 }
