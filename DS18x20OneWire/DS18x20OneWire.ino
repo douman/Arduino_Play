@@ -19,14 +19,14 @@ const char *code_version="DS18x20OneWire -> V1.04-20170331";
 
 OneWire  ds(DATAPIN);  // on pin DATAPIN (a 4.7K resistor is necessary)
 unsigned long icnt, laser_ontime = 0, motion_cnt=0;
-boolean laser_state = false;
+boolean laser_state = false, first_addr=true;
 
 
 //-------------------
 void setup(void) {
   icnt = 0;
-  Serial.begin(115200);
-  
+//  Serial.begin(115200);
+    Serial.begin(1000000);
   pinMode     (GNDPIN, OUTPUT);
   digitalWrite(GNDPIN, LOW);
   pinMode     (POWERPIN, OUTPUT);
@@ -67,22 +67,30 @@ void loop(void) {
   byte addr[8];
   int istat=0;
   float celsius, fahrenheit;
-  Serial.print(icnt++); Serial.print("- ");
+  
+// This does not work!
 
-//  istat = triggerAllDS(ds);
-//  delay(1800); // wait for conversions
+//  if(first_addr)
+//  {
+//    istat = triggerAllDS(ds);
+//    delay(800); // wait for conversions
+//    first_addr= !first_addr;
+//  }
   
   if ( !ds.search(addr)) 
   {
+    Serial.print(icnt++); Serial.print("- ");
     Serial.println("No more addresses.");
     ds.reset_search();
+    first_addr=true;
     return;
   }
   
+  Serial.print(icnt++); Serial.print("- ");
   Serial.print("R=");
   for( i = 0; i < 8; i++) 
   {
-    Serial.write(' ');
+    Serial.print(" ");
     drmPrtLead0Hex(addr[i]);
   }
 
@@ -110,60 +118,65 @@ void loop(void) {
       Serial.print("Device is not a DS18x20 family device.");
       return;
   } 
-
-  ds.reset();
-  ds.select(addr);
-  ds.write(0x44, 1);        // start conversion, with parasite power on at the end
-  delay(800);
+  Serial.println();
+  int j;
+  for(j=0; j<1; j++)
+  {
+    if(j==0)
+    {
+      ds.reset();
+      ds.select(addr);
+      ds.write(0x44, 1);        // start conversion, with parasite power on at the end
+      delay(800);
+    }    
+    present = ds.reset();
+    ds.select(addr);    
+    ds.write(0xBE);         // Read Scratchpad
   
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(0xBE);         // Read Scratchpad
-
-  Serial.print(" D= ");
-  Serial.print(present, HEX);
-  Serial.print(" ");
-  for ( i = 0; i < 9; i++) {           // we need 9 bytes
-    data[i] = ds.read();
-    //Serial.print(data[i], HEX);
-    drmPrtLead0Hex(data[i]);
+    Serial.print(" D= ");
+    Serial.print(present, HEX);
     Serial.print(" ");
-  }
-  Serial.print(" CRC=");
-  drmPrtLead0Hex(OneWire::crc8(data, 8));
-  Serial.print(" --");
-
-  // Convert the data to actual temperature
-  // because the result is a 16 bit signed integer, it should
-  // be stored to an "int16_t" type, which is always 16 bits
-  // even when compiled on a 32 bit processor.
-  int16_t raw = (data[1] << 8) | data[0];
-  if (type_s) {
-    raw = raw << 3; // 9 bit resolution default
-    if (data[7] == 0x10) {
-      // "count remain" gives full 12 bit resolution
-      raw = (raw & 0xFFF0) + 12 - data[6];
+    for ( i = 0; i < 9; i++) {           // we need 9 bytes
+      data[i] = ds.read();
+      //Serial.print(data[i], HEX);
+      drmPrtLead0Hex(data[i]);
+      Serial.print(" ");
     }
-  } else {
-    byte cfg = (data[4] & 0x60);
-    // at lower res, the low bits are undefined, so let's zero them
-    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
-    else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
-    else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
-    //// default is 12 bit resolution, 750 ms conversion time
-  }
-  celsius = (float)raw / 16.0;
-  fahrenheit = celsius * 1.8 + 32.0;
-  Serial.print(" T=");
-  Serial.print(celsius);
-  Serial.print(" C ");
-  Serial.print(fahrenheit);
-  Serial.print(" F ");
-  unsigned long mstime = millis();
-  Serial.print(mstime/60000);
-  Serial.print(":");
-  Serial.println((mstime/1000) % 60);
+    Serial.print(" CRC=");
+    drmPrtLead0Hex(OneWire::crc8(data, 8));
+    Serial.print(" --");
   
+    // Convert the data to actual temperature
+    // because the result is a 16 bit signed integer, it should
+    // be stored to an "int16_t" type, which is always 16 bits
+    // even when compiled on a 32 bit processor.
+    int16_t raw = (data[1] << 8) | data[0];
+    if (type_s) {
+      raw = raw << 3; // 9 bit resolution default
+      if (data[7] == 0x10) {
+        // "count remain" gives full 12 bit resolution
+        raw = (raw & 0xFFF0) + 12 - data[6];
+      }
+    } else {
+      byte cfg = (data[4] & 0x60);
+      // at lower res, the low bits are undefined, so let's zero them
+      if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
+      else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+      else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
+      //// default is 12 bit resolution, 750 ms conversion time
+    }
+    celsius = (float)raw / 16.0;
+    fahrenheit = celsius * 1.8 + 32.0;
+    Serial.print(" T=");
+    Serial.print(celsius);
+    Serial.print(" C ");
+    Serial.print(fahrenheit);
+    Serial.print(" F ");
+    unsigned long mstime = millis();
+    Serial.print(mstime/60000);
+    Serial.print(":");
+    Serial.println((mstime/1000) % 60);
+  }  
 
   boolean pirstate = digitalRead(PIR_IN);
   unsigned long nowtime = millis();
