@@ -1,3 +1,4 @@
+#pragma once
 // COMMON SETTINGS
 // ----------------------------------------------------------------------------------------------
 // These settings are used in both SW UART, HW UART and SPI mode
@@ -26,13 +27,11 @@
   #define BLUEFRUIT_HWSERIAL_NAME      Serial1
 #endif
 
-
 // SHARED UART SETTINGS
 // ----------------------------------------------------------------------------------------------
 // The following sets the optional Mode pin, its recommended but not required
 // ----------------------------------------------------------------------------------------------
 #define BLUEFRUIT_UART_MODE_PIN        12    // Set to -1 if unused
-
 
 // SHARED SPI SETTINGS
 // ----------------------------------------------------------------------------------------------
