@@ -7,6 +7,7 @@
   V2.1 --> ifdef(ing) for M0 cases
   V2.2 --> moved some samM0 stuff into library
   V2.2.1 --> added drmPrtLead0Hex 20170725drm
+  V2.2.2 --> added serial number for ESP8266 to drmStartPrint
 */
 
 #include "drmLib.h"
@@ -26,6 +27,8 @@ unsigned short drmSerialNo()
   unsigned short *M0SER= (unsigned short *) 0x0080A00C;
   for(i=0; i<8; i++) serial_xor ^= *M0SER++;
   return(serial_xor); // no EEPROM on M0 MCU
+// #else if defined(ESP8266) // need to work on code for ESP8266! drm 20170927
+// return(int(system_get_chip_id()));
 #else
   return(EEPROM.read(5) << 8 | EEPROM.read(6)); // combine two bytes into in serial number (drm specific)
 #endif
@@ -38,6 +41,8 @@ void drmStartPrint(const char *drmversion)
   Serial.print(F("%SN\t"));
 #if defined(ARDUINO_ARCH_SAM) || defined(ARDUINO_ARCH_SAMD) // This is the 128 bit serial number for M0, XOR the bits into a short
   print_samM0_serial();
+// #else if defined(ESP8266 // need to work on code for ESP8266! drm 20170927
+//   print_esp8266_serial();
 #else
   Serial.println(drmSerialNo());
 #endif
@@ -109,6 +114,14 @@ void print_samM0_serial()
   Serial.println(drmSerialNo());
 }
 
+/*  // need to work on code for ESP8266! drm 20170927
+// print out the SAMD processor serial number
+void print_esp8266_serial()
+{
+  Serial.print("/");
+  Serial.println(system_get_chip_id());
+}
+*/
 
 /* Save the RTC stuff for later
 // Initialize RTC module for reading

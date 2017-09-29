@@ -49,7 +49,7 @@ void loop()
           ledoncnt++;
         } 
       }
-      rand_del[i] = random(500, 16001);
+      rand_del[i] = random(50, 20000);
       prev_millis[i] = millis();
       Serial.print("Chan # "); Serial.print(i); Serial.print(" New Delay-> "); Serial.println(rand_del[i]);
     }
